@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>2人の記念日カウント v2</title>
+    <title>2人の記念日カウント v2.1</title>
     <meta
       name="description"
-      content="2人の大切な記念日をスマホで見やすく管理できる、カードUIの記念日カウントアプリ v2。"
+      content="2人の大切な日々をやさしいカードUIで管理できる、日本語の記念日カウントミニアプリ v2.1。"
     />
     <link rel="stylesheet" href="style.css" />
   </head>
@@ -17,20 +17,21 @@
           <div class="hero-top">
             <div>
               <p class="section-chip">Mini App</p>
-              <h1>2人の記念日カウント v2</h1>
+              <h1>2人の記念日カウント <span>v2.1</span></h1>
+              <p class="hero-text">
+                2人の名前、付き合った日、思い出の記念日をひとつにまとめて見返せる、スマホ向けのやさしい記念日ダッシュボードです。
+              </p>
             </div>
-            <div class="today-pill">
+            <div class="today-pill" aria-label="今日の日付">
               <span class="today-pill__label">Today</span>
               <strong id="today-label">--/--</strong>
             </div>
           </div>
-          <p class="hero-text">
-            2人の名前、付き合った日、大切な思い出をまとめて管理できる、スマホ向けの記念日ダッシュボードです。
-          </p>
+
           <div class="hero-tags" aria-label="アプリの特徴">
-            <span>大きな数字表示</span>
-            <span>月・年の記念日を自動計算</span>
-            <span>任意記念日を保存</span>
+            <span>大きく見やすい数字</span>
+            <span>月記念日・年記念日を自動計算</span>
+            <span>JSONバックアップ対応</span>
           </div>
         </header>
 
@@ -39,61 +40,67 @@
             <div>
               <p class="section-chip">Dashboard</p>
               <h2 id="dashboard-heading">ダッシュボード</h2>
-              <p class="section-description">今日までの歩みと、次の大切な日を見やすくまとめて表示します。</p>
+              <p class="section-description">
+                今日までの歩みと、次に近い大切な日をひと目で確認できます。
+              </p>
             </div>
-            <button id="jump-to-form-button" class="ghost-button" type="button">設定する</button>
+            <button id="jump-to-settings-button" class="ghost-button" type="button">基本設定へ</button>
           </div>
 
           <div id="empty-dashboard" class="empty-panel">
-            <p class="empty-panel__title">まずは基本設定を保存しましょう。</p>
-            <p class="empty-panel__text">2人の名前と付き合った日を登録すると、カウント表示と記念日管理が使えるようになります。</p>
+            <p class="empty-panel__title">まずは2人の基本設定を保存しましょう。</p>
+            <p class="empty-panel__text">
+              名前と付き合った日を登録すると、経過日数・次の記念日・思い出一覧が使えるようになります。
+            </p>
           </div>
 
-          <div id="dashboard-content" class="hidden">
+          <div id="dashboard-content" class="dashboard-content hidden">
             <div id="celebration-banner" class="celebration-banner hidden" aria-live="polite">
               <p id="celebration-message"></p>
             </div>
 
-            <div class="couple-card">
+            <article class="couple-card">
               <div>
                 <p class="couple-card__label">Couple</p>
                 <h3 id="couple-title">ふたりの記念日</h3>
                 <p id="relationship-date-text" class="couple-card__subtext"></p>
               </div>
               <div class="couple-card__heart" aria-hidden="true">♡</div>
-            </div>
+            </article>
 
             <div class="stats-grid">
               <article class="stat-card stat-card--featured">
                 <p class="stat-card__label">付き合ってから</p>
                 <p id="days-together" class="stat-card__value">0日</p>
-                <p class="stat-card__note">今日までの大切な日数です。</p>
+                <p class="stat-card__note">今日まで一緒に過ごした日数です。</p>
               </article>
 
               <article class="stat-card stat-card--blue">
                 <p class="stat-card__label">次の月記念日まで</p>
                 <p id="monthly-countdown" class="stat-card__value stat-card__value--small">あと0日</p>
-                <p id="monthly-note" class="stat-card__note"></p>
+                <p id="monthly-note" class="stat-card__note">-</p>
               </article>
 
               <article class="stat-card stat-card--lavender">
                 <p class="stat-card__label">次の年記念日まで</p>
                 <p id="yearly-countdown" class="stat-card__value stat-card__value--small">あと0日</p>
-                <p id="yearly-note" class="stat-card__note"></p>
+                <p id="yearly-note" class="stat-card__note">-</p>
               </article>
             </div>
 
             <article id="highlight-card" class="highlight-card">
               <div class="highlight-card__header">
                 <div>
-                  <p class="section-chip">Next Memory</p>
-                  <h3>直近の記念日</h3>
+                  <p class="section-chip">Highlight</p>
+                  <h3>いちばん近い記念日</h3>
                 </div>
                 <span id="highlight-badge" class="badge badge--accent">注目</span>
               </div>
               <p id="highlight-title" class="highlight-card__title">記念日を登録するとここに表示されます。</p>
               <p id="highlight-date" class="highlight-card__meta">-</p>
-              <p id="highlight-note" class="highlight-card__description">近い記念日を1件ピックアップして見やすく表示します。</p>
+              <p id="highlight-note" class="highlight-card__description">
+                次にやってくる任意記念日を目立つカードで表示します。
+              </p>
             </article>
           </div>
         </section>
@@ -103,12 +110,14 @@
             <div>
               <p class="section-chip">Settings</p>
               <h2 id="settings-heading">基本設定</h2>
-              <p class="section-description">2人の名前と付き合った日を保存します。保存後は自動でダッシュボードに反映されます。</p>
+              <p class="section-description">
+                2人の名前と付き合った日を保存します。保存後すぐにダッシュボードへ反映されます。
+              </p>
             </div>
           </div>
 
           <form id="settings-form" class="form-stack" novalidate>
-            <div class="form-grid">
+            <div class="form-grid form-grid--two">
               <label class="field">
                 <span class="field__label">1人目の名前</span>
                 <input id="person-one-name" name="personOneName" type="text" maxlength="20" placeholder="例：ゆう" required />
@@ -136,15 +145,17 @@
           <div class="section-head">
             <div>
               <p class="section-chip">Memories</p>
-              <h2 id="anniversary-form-heading">任意記念日を管理</h2>
-              <p class="section-description">名前、日付、カテゴリ、メモを登録できます。編集するときは一覧の編集ボタンを使います。</p>
+              <h2 id="anniversary-form-heading">任意記念日を追加・編集</h2>
+              <p class="section-description">
+                記念日の名前、日付、カテゴリ、メモを登録できます。編集時は内容がフォームに読み込まれます。
+              </p>
             </div>
           </div>
 
           <form id="anniversary-form" class="form-stack" novalidate>
             <input id="anniversary-id" type="hidden" />
 
-            <div class="form-grid">
+            <div class="form-grid form-grid--two">
               <label class="field">
                 <span class="field__label">記念日の名前</span>
                 <input id="anniversary-name" type="text" maxlength="40" placeholder="例：はじめての旅行" required />
@@ -155,7 +166,7 @@
               </label>
             </div>
 
-            <div class="form-grid">
+            <div class="form-grid form-grid--two">
               <label class="field">
                 <span class="field__label">カテゴリ</span>
                 <select id="anniversary-category" required>
@@ -169,7 +180,7 @@
               </label>
               <label class="field field--textarea">
                 <span class="field__label">メモ</span>
-                <textarea id="anniversary-memo" rows="4" maxlength="120" placeholder="思い出のメモを残せます。"></textarea>
+                <textarea id="anniversary-memo" rows="4" maxlength="140" placeholder="思い出やその日の気持ちをメモできます。"></textarea>
               </label>
             </div>
 
@@ -183,17 +194,44 @@
         </section>
 
         <section class="card" aria-labelledby="anniversary-list-heading">
-          <div class="section-head">
+          <div class="section-head section-head--wrap">
             <div>
               <p class="section-chip">List</p>
               <h2 id="anniversary-list-heading">記念日一覧</h2>
-              <p class="section-description">近い順に並び替えて表示します。今日や近日の記念日はバッジでわかりやすく表示します。</p>
+              <p class="section-description">
+                日付が近い順に並びます。今日の記念日には「今日」、7日以内の記念日には「まもなく」バッジが付きます。
+              </p>
             </div>
-            <span id="anniversary-count" class="count-pill">0件</span>
+            <div class="section-actions">
+              <span id="anniversary-count" class="count-pill">0件</span>
+            </div>
           </div>
 
           <p id="anniversary-list-empty" class="empty-list">まだ任意記念日は登録されていません。</p>
           <div id="anniversary-list" class="anniversary-list"></div>
+        </section>
+
+        <section class="card" aria-labelledby="backup-heading">
+          <div class="section-head section-head--wrap">
+            <div>
+              <p class="section-chip">Backup</p>
+              <h2 id="backup-heading">バックアップと復元</h2>
+              <p class="section-description">
+                保存データをJSONファイルで書き出したり、読み込んで復元したりできます。localStorage保存も引き続き利用します。
+              </p>
+            </div>
+          </div>
+
+          <div class="backup-panel">
+            <button id="export-button" type="button" class="primary-button">JSONを書き出す</button>
+            <label class="secondary-button secondary-button--file" for="import-file">
+              JSONを読み込む
+            </label>
+            <input id="import-file" type="file" accept="application/json,.json" class="visually-hidden" />
+          </div>
+
+          <p id="backup-message" class="form-message form-message--success" aria-live="polite"></p>
+          <p class="backup-note">※ 別端末とは自動同期されません。必要に応じてJSONファイルを保存してください。</p>
         </section>
       </div>
     </main>
