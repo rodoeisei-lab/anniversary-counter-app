@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>2人の記念日カウント</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero card">
+        <p class="hero__eyebrow">Anniversary Counter</p>
+        <h1>2人の記念日カウント</h1>
+        <p class="hero__description">
+          付き合った日からの経過日数や、次の月記念日・年記念日までの日数をやさしく確認できるシンプルなアプリです。
+        </p>
+      </section>
+
+      <section class="card" aria-labelledby="relationship-heading">
+        <div class="section-heading">
+          <h2 id="relationship-heading">付き合った日の設定</h2>
+          <p>まずは2人が付き合い始めた日を登録してください。</p>
+        </div>
+
+        <form id="relationship-form" class="stack-form" novalidate>
+          <label class="field">
+            <span class="field__label">付き合った日</span>
+            <input id="relationship-date" name="relationshipDate" type="date" required />
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="primary-button">保存する</button>
+          </div>
+          <p id="relationship-error" class="form-message error" aria-live="polite"></p>
+          <p id="relationship-success" class="form-message success" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section id="summary-section" class="card hidden" aria-labelledby="summary-heading">
+        <div class="section-heading">
+          <h2 id="summary-heading">カウント表示</h2>
+          <p>今日時点の記念日情報を自動で計算して表示します。</p>
+        </div>
+
+        <div class="summary-grid">
+          <article class="summary-card accent-blue">
+            <p class="summary-card__label">付き合ってから今日まで</p>
+            <p id="days-together" class="summary-card__value">0日</p>
+            <p class="summary-card__note">大切な日々の積み重ねです。</p>
+          </article>
+
+          <article class="summary-card accent-pink">
+            <p class="summary-card__label">次の月記念日まで</p>
+            <p id="monthly-countdown" class="summary-card__value">あと0日</p>
+            <p id="monthly-message" class="summary-card__note">今日が月記念日の場合はメッセージが切り替わります。</p>
+          </article>
+
+          <article class="summary-card accent-lavender">
+            <p class="summary-card__label">次の年記念日まで</p>
+            <p id="yearly-countdown" class="summary-card__value">あと0日</p>
+            <p id="yearly-message" class="summary-card__note">うるう年や月末にも配慮して計算します。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="custom-heading">
+        <div class="section-heading">
+          <h2 id="custom-heading">任意の記念日を追加</h2>
+          <p>名前と日付の両方を入力すると一覧に追加できます。</p>
+        </div>
+
+        <form id="custom-anniversary-form" class="stack-form" novalidate>
+          <div class="input-grid">
+            <label class="field">
+              <span class="field__label">記念日の名前</span>
+              <input
+                id="anniversary-name"
+                name="anniversaryName"
+                type="text"
+                maxlength="40"
+                placeholder="例：はじめて会った日"
+              />
+            </label>
+
+            <label class="field">
+              <span class="field__label">任意の記念日の日付</span>
+              <input id="anniversary-date" name="anniversaryDate" type="date" />
+            </label>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="primary-button">記念日を追加</button>
+          </div>
+          <p id="custom-error" class="form-message error" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section class="card" aria-labelledby="list-heading">
+        <div class="section-heading">
+          <h2 id="list-heading">登録した記念日の一覧</h2>
+          <p>ブラウザに保存された記念日をここで確認できます。</p>
+        </div>
+
+        <ul id="anniversary-list" class="anniversary-list"></ul>
+        <p id="empty-state" class="empty-state">まだ任意の記念日は登録されていません。</p>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
