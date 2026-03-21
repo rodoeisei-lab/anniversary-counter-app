@@ -1,5 +1,6 @@
 const STORAGE_KEY = 'anniversary-counter-data';
 
+const todayBadge = document.getElementById('today-badge');
 const relationshipForm = document.getElementById('relationship-form');
 const relationshipDateInput = document.getElementById('relationship-date');
 const relationshipError = document.getElementById('relationship-error');
@@ -23,6 +24,7 @@ let appData = loadAppData();
 initialize();
 
 function initialize() {
+  renderTodayBadge();
   relationshipDateInput.value = appData.relationshipDate || '';
   renderSummary();
   renderAnniversaryList();
@@ -137,6 +139,11 @@ function handleAnniversaryDelete(event) {
   appData.anniversaries = appData.anniversaries.filter((item) => item.id !== deleteId);
   saveAppData();
   renderAnniversaryList();
+}
+
+function renderTodayBadge() {
+  const today = getToday();
+  todayBadge.textContent = `${today.getMonth() + 1}/${today.getDate()}`;
 }
 
 function renderSummary() {

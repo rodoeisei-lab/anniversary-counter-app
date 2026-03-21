@@ -7,102 +7,132 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <main class="page">
-      <section class="hero card">
-        <p class="hero__eyebrow">Anniversary Counter</p>
-        <h1>2人の記念日カウント</h1>
-        <p class="hero__description">
-          付き合った日からの経過日数や、次の月記念日・年記念日までの日数をやさしく確認できるシンプルなアプリです。
-        </p>
-      </section>
-
-      <section class="card" aria-labelledby="relationship-heading">
-        <div class="section-heading">
-          <h2 id="relationship-heading">付き合った日の設定</h2>
-          <p>まずは2人が付き合い始めた日を登録してください。</p>
-        </div>
-
-        <form id="relationship-form" class="stack-form" novalidate>
-          <label class="field">
-            <span class="field__label">付き合った日</span>
-            <input id="relationship-date" name="relationshipDate" type="date" required />
-          </label>
-          <div class="form-actions">
-            <button type="submit" class="primary-button">保存する</button>
+    <main class="app-shell">
+      <div class="phone-frame">
+        <section class="hero card">
+          <div class="hero__status">
+            <p class="hero__eyebrow">Mini App</p>
+            <span id="today-badge" class="hero__badge">Today</span>
           </div>
-          <p id="relationship-error" class="form-message error" aria-live="polite"></p>
-          <p id="relationship-success" class="form-message success" aria-live="polite"></p>
-        </form>
-      </section>
+          <h1>2人の記念日カウント</h1>
+          <p class="hero__description">
+            大切な日を見やすく整理して、スマホでさっと確認できる2人のための記念日アプリです。
+          </p>
 
-      <section id="summary-section" class="card hidden" aria-labelledby="summary-heading">
-        <div class="section-heading">
-          <h2 id="summary-heading">カウント表示</h2>
-          <p>今日時点の記念日情報を自動で計算して表示します。</p>
-        </div>
+          <div class="hero-highlights" aria-label="アプリの特徴">
+            <article class="highlight-pill">
+              <span class="highlight-pill__label">日数表示</span>
+              <strong class="highlight-pill__value">大きく</strong>
+            </article>
+            <article class="highlight-pill">
+              <span class="highlight-pill__label">記念日管理</span>
+              <strong class="highlight-pill__value">かんたん</strong>
+            </article>
+            <article class="highlight-pill">
+              <span class="highlight-pill__label">保存</span>
+              <strong class="highlight-pill__value">自動</strong>
+            </article>
+          </div>
+        </section>
 
-        <div class="summary-grid">
-          <article class="summary-card accent-blue">
-            <p class="summary-card__label">付き合ってから今日まで</p>
-            <p id="days-together" class="summary-card__value">0日</p>
-            <p class="summary-card__note">大切な日々の積み重ねです。</p>
-          </article>
+        <section class="card card--soft" aria-labelledby="relationship-heading">
+          <div class="section-heading">
+            <p class="section-tag">STEP 1</p>
+            <h2 id="relationship-heading">付き合った日を登録</h2>
+            <p>最初にスタートの日を登録すると、今日までの日数と次の記念日を自動で表示します。</p>
+          </div>
 
-          <article class="summary-card accent-pink">
-            <p class="summary-card__label">次の月記念日まで</p>
-            <p id="monthly-countdown" class="summary-card__value">あと0日</p>
-            <p id="monthly-message" class="summary-card__note">今日が月記念日の場合はメッセージが切り替わります。</p>
-          </article>
-
-          <article class="summary-card accent-lavender">
-            <p class="summary-card__label">次の年記念日まで</p>
-            <p id="yearly-countdown" class="summary-card__value">あと0日</p>
-            <p id="yearly-message" class="summary-card__note">うるう年や月末にも配慮して計算します。</p>
-          </article>
-        </div>
-      </section>
-
-      <section class="card" aria-labelledby="custom-heading">
-        <div class="section-heading">
-          <h2 id="custom-heading">任意の記念日を追加</h2>
-          <p>名前と日付の両方を入力すると一覧に追加できます。</p>
-        </div>
-
-        <form id="custom-anniversary-form" class="stack-form" novalidate>
-          <div class="input-grid">
+          <form id="relationship-form" class="stack-form" novalidate>
             <label class="field">
-              <span class="field__label">記念日の名前</span>
-              <input
-                id="anniversary-name"
-                name="anniversaryName"
-                type="text"
-                maxlength="40"
-                placeholder="例：はじめて会った日"
-              />
+              <span class="field__label">付き合った日</span>
+              <input id="relationship-date" name="relationshipDate" type="date" required />
             </label>
+            <div class="form-actions">
+              <button type="submit" class="primary-button">保存する</button>
+            </div>
+            <p id="relationship-error" class="form-message error" aria-live="polite"></p>
+            <p id="relationship-success" class="form-message success" aria-live="polite"></p>
+          </form>
+        </section>
 
-            <label class="field">
-              <span class="field__label">任意の記念日の日付</span>
-              <input id="anniversary-date" name="anniversaryDate" type="date" />
-            </label>
+        <section id="summary-section" class="card summary-panel hidden" aria-labelledby="summary-heading">
+          <div class="section-heading section-heading--inline">
+            <div>
+              <p class="section-tag">DASHBOARD</p>
+              <h2 id="summary-heading">今日のカウント</h2>
+              <p>見たい数字がすぐ目に入るように、3つのカードにまとめて表示します。</p>
+            </div>
+            <div class="summary-overview">
+              <span class="summary-overview__label">Anniversary mode</span>
+              <strong class="summary-overview__value">ON</strong>
+            </div>
           </div>
 
-          <div class="form-actions">
-            <button type="submit" class="primary-button">記念日を追加</button>
+          <div class="summary-grid">
+            <article class="summary-card accent-blue summary-card--featured">
+              <p class="summary-card__label">付き合ってから今日まで</p>
+              <p id="days-together" class="summary-card__value">0日</p>
+              <p class="summary-card__note">大切な日々の積み重ねです。</p>
+            </article>
+
+            <article class="summary-card accent-pink">
+              <p class="summary-card__label">次の月記念日まで</p>
+              <p id="monthly-countdown" class="summary-card__value">あと0日</p>
+              <p id="monthly-message" class="summary-card__note">今日が月記念日の場合はメッセージが切り替わります。</p>
+            </article>
+
+            <article class="summary-card accent-lavender">
+              <p class="summary-card__label">次の年記念日まで</p>
+              <p id="yearly-countdown" class="summary-card__value">あと0日</p>
+              <p id="yearly-message" class="summary-card__note">うるう年や月末にも配慮して計算します。</p>
+            </article>
           </div>
-          <p id="custom-error" class="form-message error" aria-live="polite"></p>
-        </form>
-      </section>
+        </section>
 
-      <section class="card" aria-labelledby="list-heading">
-        <div class="section-heading">
-          <h2 id="list-heading">登録した記念日の一覧</h2>
-          <p>ブラウザに保存された記念日をここで確認できます。</p>
-        </div>
+        <section class="card" aria-labelledby="custom-heading">
+          <div class="section-heading">
+            <p class="section-tag">STEP 2</p>
+            <h2 id="custom-heading">任意の記念日を追加</h2>
+            <p>名前と日付を入れるだけで、2人だけの大切な思い出を一覧で管理できます。</p>
+          </div>
 
-        <ul id="anniversary-list" class="anniversary-list"></ul>
-        <p id="empty-state" class="empty-state">まだ任意の記念日は登録されていません。</p>
-      </section>
+          <form id="custom-anniversary-form" class="stack-form" novalidate>
+            <div class="input-grid">
+              <label class="field">
+                <span class="field__label">記念日の名前</span>
+                <input
+                  id="anniversary-name"
+                  name="anniversaryName"
+                  type="text"
+                  maxlength="40"
+                  placeholder="例：はじめて会った日"
+                />
+              </label>
+
+              <label class="field">
+                <span class="field__label">任意の記念日の日付</span>
+                <input id="anniversary-date" name="anniversaryDate" type="date" />
+              </label>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="primary-button">記念日を追加</button>
+            </div>
+            <p id="custom-error" class="form-message error" aria-live="polite"></p>
+          </form>
+        </section>
+
+        <section class="card card--list" aria-labelledby="list-heading">
+          <div class="section-heading">
+            <p class="section-tag">MEMORIES</p>
+            <h2 id="list-heading">登録した記念日の一覧</h2>
+            <p>ブラウザに保存された記念日を、見やすいカード型でいつでも見返せます。</p>
+          </div>
+
+          <ul id="anniversary-list" class="anniversary-list"></ul>
+          <p id="empty-state" class="empty-state">まだ任意の記念日は登録されていません。</p>
+        </section>
+      </div>
     </main>
 
     <script src="script.js"></script>
