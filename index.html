@@ -68,6 +68,12 @@
             </div>
           </div>
 
+          <div id="celebration-banner" class="celebration-banner hidden" aria-live="polite">
+            <p id="celebration-message" class="celebration-banner__text">
+              今日は大切な記念日です。おめでとうございます。
+            </p>
+          </div>
+
           <div class="summary-grid">
             <article class="summary-card accent-blue summary-card--featured">
               <p class="summary-card__label">付き合ってから今日まで</p>
@@ -93,7 +99,7 @@
           <div class="section-heading">
             <p class="section-tag">STEP 2</p>
             <h2 id="custom-heading">任意の記念日を追加</h2>
-            <p>名前と日付を入れるだけで、2人だけの大切な思い出を一覧で管理できます。</p>
+            <p>名前・日付・メモを入れるだけで、2人だけの大切な思い出を一覧で管理できます。</p>
           </div>
 
           <form id="custom-anniversary-form" class="stack-form" novalidate>
@@ -115,6 +121,17 @@
               </label>
             </div>
 
+            <label class="field field--textarea">
+              <span class="field__label">メモ（任意）</span>
+              <textarea
+                id="anniversary-memo"
+                name="anniversaryMemo"
+                rows="3"
+                maxlength="120"
+                placeholder="例：初めて一緒に出かけた思い出"
+              ></textarea>
+            </label>
+
             <div class="form-actions">
               <button type="submit" class="primary-button">記念日を追加</button>
             </div>
@@ -126,7 +143,7 @@
           <div class="section-heading">
             <p class="section-tag">MEMORIES</p>
             <h2 id="list-heading">登録した記念日の一覧</h2>
-            <p>ブラウザに保存された記念日を、見やすいカード型でいつでも見返せます。</p>
+            <p>ブラウザに保存された記念日を、名前・日付・メモつきのカードでいつでも見返せます。</p>
           </div>
 
           <ul id="anniversary-list" class="anniversary-list"></ul>
