@@ -1,353 +1,619 @@
-const STORAGE_KEY = 'anniversary-counter-data';
+const STORAGE_KEY = "anniversary-counter-v2";
+const CATEGORY_OPTIONS = ["デート", "旅行", "はじめて", "プレゼント", "その他"];
+const SOON_DAYS = 7;
 
-const todayBadge = document.getElementById('today-badge');
-const relationshipForm = document.getElementById('relationship-form');
-const relationshipDateInput = document.getElementById('relationship-date');
-const relationshipError = document.getElementById('relationship-error');
-const relationshipSuccess = document.getElementById('relationship-success');
-const summarySection = document.getElementById('summary-section');
-const celebrationBanner = document.getElementById('celebration-banner');
-const celebrationMessage = document.getElementById('celebration-message');
-const daysTogetherElement = document.getElementById('days-together');
-const monthlyCountdownElement = document.getElementById('monthly-countdown');
-const monthlyMessageElement = document.getElementById('monthly-message');
-const yearlyCountdownElement = document.getElementById('yearly-countdown');
-const yearlyMessageElement = document.getElementById('yearly-message');
+const todayLabel = document.getElementById("today-label");
+const jumpToFormButton = document.getElementById("jump-to-form-button");
+const emptyDashboard = document.getElementById("empty-dashboard");
+const dashboardContent = document.getElementById("dashboard-content");
+const celebrationBanner = document.getElementById("celebration-banner");
+const celebrationMessage = document.getElementById("celebration-message");
+const coupleTitle = document.getElementById("couple-title");
+const relationshipDateText = document.getElementById("relationship-date-text");
+const daysTogether = document.getElementById("days-together");
+const monthlyCountdown = document.getElementById("monthly-countdown");
+const monthlyNote = document.getElementById("monthly-note");
+const yearlyCountdown = document.getElementById("yearly-countdown");
+const yearlyNote = document.getElementById("yearly-note");
+const highlightBadge = document.getElementById("highlight-badge");
+const highlightTitle = document.getElementById("highlight-title");
+const highlightDate = document.getElementById("highlight-date");
+const highlightNote = document.getElementById("highlight-note");
 
-const customAnniversaryForm = document.getElementById('custom-anniversary-form');
-const anniversaryNameInput = document.getElementById('anniversary-name');
-const anniversaryDateInput = document.getElementById('anniversary-date');
-const anniversaryMemoInput = document.getElementById('anniversary-memo');
-const customError = document.getElementById('custom-error');
-const anniversaryList = document.getElementById('anniversary-list');
-const emptyState = document.getElementById('empty-state');
+const settingsForm = document.getElementById("settings-form");
+const personOneNameInput = document.getElementById("person-one-name");
+const personTwoNameInput = document.getElementById("person-two-name");
+const relationshipDateInput = document.getElementById("relationship-date");
+const settingsError = document.getElementById("settings-error");
+const settingsSuccess = document.getElementById("settings-success");
 
-let appData = loadAppData();
+const anniversaryForm = document.getElementById("anniversary-form");
+const anniversaryIdInput = document.getElementById("anniversary-id");
+const anniversaryNameInput = document.getElementById("anniversary-name");
+const anniversaryDateInput = document.getElementById("anniversary-date");
+const anniversaryCategoryInput = document.getElementById("anniversary-category");
+const anniversaryMemoInput = document.getElementById("anniversary-memo");
+const anniversaryError = document.getElementById("anniversary-error");
+const anniversarySuccess = document.getElementById("anniversary-success");
+const saveAnniversaryButton = document.getElementById("save-anniversary-button");
+const cancelEditButton = document.getElementById("cancel-edit-button");
 
-initialize();
+const anniversaryCount = document.getElementById("anniversary-count");
+const anniversaryListEmpty = document.getElementById("anniversary-list-empty");
+const anniversaryList = document.getElementById("anniversary-list");
 
-function initialize() {
-  renderTodayBadge();
-  relationshipDateInput.value = appData.relationshipDate || '';
-  renderSummary();
+let appState = loadAppState();
+
+initializeApp();
+
+function initializeApp() {
+  renderTodayLabel();
+  fillSettingsForm();
+  renderDashboard();
   renderAnniversaryList();
 
-  relationshipForm.addEventListener('submit', handleRelationshipSubmit);
-  customAnniversaryForm.addEventListener('submit', handleCustomAnniversarySubmit);
-  anniversaryList.addEventListener('click', handleAnniversaryDelete);
+  settingsForm.addEventListener("submit", handleSettingsSubmit);
+  anniversaryForm.addEventListener("submit", handleAnniversarySubmit);
+  cancelEditButton.addEventListener("click", resetAnniversaryForm);
+  anniversaryList.addEventListener("click", handleAnniversaryAction);
+  jumpToFormButton.addEventListener("click", () => {
+    settingsForm.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
 }
 
-function loadAppData() {
-  const rawData = localStorage.getItem(STORAGE_KEY);
-
-  if (!rawData) {
-    return createEmptyData();
-  }
-
-  try {
-    const parsedData = JSON.parse(rawData);
-
-    return {
-      relationshipDate: typeof parsedData.relationshipDate === 'string' ? parsedData.relationshipDate : '',
-      anniversaries: Array.isArray(parsedData.anniversaries)
-        ? parsedData.anniversaries
-            .map(normalizeAnniversary)
-            .filter((item) => item && item.id && item.name && item.date)
-        : []
-    };
-  } catch (error) {
-    return createEmptyData();
-  }
-}
-
-function normalizeAnniversary(item) {
-  if (!item || typeof item !== 'object') {
-    return null;
-  }
-
+function createDefaultState() {
   return {
-    id: typeof item.id === 'string' ? item.id : String(item.id || ''),
-    name: typeof item.name === 'string' ? item.name : '',
-    date: typeof item.date === 'string' ? item.date : '',
-    memo: typeof item.memo === 'string' ? item.memo : ''
-  };
-}
-
-function createEmptyData() {
-  return {
-    relationshipDate: '',
+    version: 2,
+    settings: {
+      personOneName: "",
+      personTwoName: "",
+      relationshipDate: ""
+    },
     anniversaries: []
   };
 }
 
-function saveAppData() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
-}
+function loadAppState() {
+  const raw = localStorage.getItem(STORAGE_KEY);
 
-function handleRelationshipSubmit(event) {
-  event.preventDefault();
-  relationshipError.textContent = '';
-  relationshipSuccess.textContent = '';
-
-  const selectedDate = relationshipDateInput.value;
-
-  if (!selectedDate) {
-    relationshipError.textContent = '付き合った日を入力してください。';
-    renderSummary();
-    return;
+  if (!raw) {
+    return createDefaultState();
   }
 
-  const relationshipDate = parseLocalDate(selectedDate);
+  try {
+    const parsed = JSON.parse(raw);
+    return normalizeState(parsed);
+  } catch (error) {
+    return createDefaultState();
+  }
+}
+
+function normalizeState(data) {
+  const defaultState = createDefaultState();
+  const settings = data && typeof data === "object" ? data.settings : null;
+  const anniversaries = Array.isArray(data?.anniversaries) ? data.anniversaries : [];
+
+  return {
+    version: 2,
+    settings: {
+      personOneName: typeof settings?.personOneName === "string" ? settings.personOneName : "",
+      personTwoName: typeof settings?.personTwoName === "string" ? settings.personTwoName : "",
+      relationshipDate: typeof settings?.relationshipDate === "string" ? settings.relationshipDate : ""
+    },
+    anniversaries: anniversaries.map(normalizeAnniversary).filter(Boolean) || defaultState.anniversaries
+  };
+}
+
+function normalizeAnniversary(item) {
+  if (!item || typeof item !== "object") {
+    return null;
+  }
+
+  const category = typeof item.category === "string" ? item.category : "その他";
+
+  return {
+    id: typeof item.id === "string" ? item.id : createId(),
+    name: typeof item.name === "string" ? item.name : "",
+    date: typeof item.date === "string" ? item.date : "",
+    category: CATEGORY_OPTIONS.includes(category) ? category : "その他",
+    memo: typeof item.memo === "string" ? item.memo : ""
+  };
+}
+
+function saveAppState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+}
+
+function fillSettingsForm() {
+  personOneNameInput.value = appState.settings.personOneName;
+  personTwoNameInput.value = appState.settings.personTwoName;
+  relationshipDateInput.value = appState.settings.relationshipDate;
+}
+
+function renderTodayLabel() {
   const today = getToday();
+  todayLabel.textContent = `${today.getMonth() + 1}/${today.getDate()}`;
+}
+
+function handleSettingsSubmit(event) {
+  event.preventDefault();
+  clearMessages();
+
+  const personOneName = personOneNameInput.value.trim();
+  const personTwoName = personTwoNameInput.value.trim();
+  const relationshipDate = relationshipDateInput.value;
+
+  if (!personOneName || !personTwoName) {
+    settingsError.textContent = "2人の名前を両方入力してください。";
+    return;
+  }
 
   if (!relationshipDate) {
-    relationshipError.textContent = '日付の形式を確認してください。';
+    settingsError.textContent = "付き合った日を入力してください。";
     return;
   }
 
-  if (relationshipDate > today) {
-    relationshipError.textContent = '付き合った日に未来の日付は設定できません。';
-    return;
-  }
-
-  appData.relationshipDate = selectedDate;
-  saveAppData();
-  renderSummary();
-  relationshipSuccess.textContent = '付き合った日を保存しました。';
-}
-
-function handleCustomAnniversarySubmit(event) {
-  event.preventDefault();
-  customError.textContent = '';
-
-  const anniversaryName = anniversaryNameInput.value.trim();
-  const anniversaryDate = anniversaryDateInput.value;
-  const anniversaryMemo = anniversaryMemoInput.value.trim();
-
-  if (!anniversaryName || !anniversaryDate) {
-    customError.textContent = '記念日の名前と日付をどちらも入力してください。';
-    return;
-  }
-
-  if (!parseLocalDate(anniversaryDate)) {
-    customError.textContent = '記念日の日付を正しく入力してください。';
-    return;
-  }
-
-  appData.anniversaries.push({
-    id: createId(),
-    name: anniversaryName,
-    date: anniversaryDate,
-    memo: anniversaryMemo
-  });
-
-  saveAppData();
-  renderAnniversaryList();
-  customAnniversaryForm.reset();
-}
-
-function handleAnniversaryDelete(event) {
-  const deleteButton = event.target.closest('[data-delete-id]');
-
-  if (!deleteButton) {
-    return;
-  }
-
-  if (!window.confirm('この記念日を削除しますか？')) {
-    return;
-  }
-
-  const deleteId = deleteButton.dataset.deleteId;
-  appData.anniversaries = appData.anniversaries.filter((item) => item.id !== deleteId);
-  saveAppData();
-  renderAnniversaryList();
-}
-
-function renderTodayBadge() {
+  const parsedRelationshipDate = parseLocalDate(relationshipDate);
   const today = getToday();
-  todayBadge.textContent = `${today.getMonth() + 1}/${today.getDate()}`;
-}
 
-function renderSummary() {
-  if (!appData.relationshipDate) {
-    summarySection.classList.add('hidden');
-    celebrationBanner.classList.add('hidden');
+  if (!parsedRelationshipDate) {
+    settingsError.textContent = "付き合った日の日付形式を確認してください。";
     return;
   }
 
-  const relationshipDate = parseLocalDate(appData.relationshipDate);
+  if (parsedRelationshipDate > today) {
+    settingsError.textContent = "付き合った日に未来の日付は設定できません。";
+    return;
+  }
+
+  appState.settings = {
+    personOneName,
+    personTwoName,
+    relationshipDate
+  };
+
+  saveAppState();
+  renderDashboard();
+  settingsSuccess.textContent = "基本設定を保存しました。ダッシュボードを更新しています。";
+}
+
+function handleAnniversarySubmit(event) {
+  event.preventDefault();
+  anniversaryError.textContent = "";
+  anniversarySuccess.textContent = "";
+
+  const formData = {
+    id: anniversaryIdInput.value,
+    name: anniversaryNameInput.value.trim(),
+    date: anniversaryDateInput.value,
+    category: anniversaryCategoryInput.value,
+    memo: anniversaryMemoInput.value.trim()
+  };
+
+  const validationMessage = validateAnniversaryForm(formData);
+  if (validationMessage) {
+    anniversaryError.textContent = validationMessage;
+    return;
+  }
+
+  const anniversaryItem = {
+    id: formData.id || createId(),
+    name: formData.name,
+    date: formData.date,
+    category: formData.category,
+    memo: formData.memo
+  };
+
+  const editIndex = appState.anniversaries.findIndex((item) => item.id === anniversaryItem.id);
+
+  if (editIndex >= 0) {
+    appState.anniversaries[editIndex] = anniversaryItem;
+    anniversarySuccess.textContent = "記念日を更新しました。";
+  } else {
+    appState.anniversaries.push(anniversaryItem);
+    anniversarySuccess.textContent = "記念日を追加しました。";
+  }
+
+  saveAppState();
+  renderDashboard();
+  renderAnniversaryList();
+  resetAnniversaryForm();
+}
+
+function validateAnniversaryForm(formData) {
+  if (!appState.settings.relationshipDate) {
+    return "先に基本設定を保存してください。";
+  }
+
+  if (!formData.name) {
+    return "記念日の名前を入力してください。";
+  }
+
+  if (!formData.date) {
+    return "記念日の日付を入力してください。";
+  }
+
+  if (!parseLocalDate(formData.date)) {
+    return "記念日の日付形式を確認してください。";
+  }
+
+  if (!CATEGORY_OPTIONS.includes(formData.category)) {
+    return "カテゴリを選択してください。";
+  }
+
+  return "";
+}
+
+function handleAnniversaryAction(event) {
+  const editButton = event.target.closest("[data-edit-id]");
+  const deleteButton = event.target.closest("[data-delete-id]");
+
+  if (editButton) {
+    startEditAnniversary(editButton.dataset.editId);
+    return;
+  }
+
+  if (deleteButton) {
+    deleteAnniversary(deleteButton.dataset.deleteId);
+  }
+}
+
+function startEditAnniversary(targetId) {
+  const targetItem = appState.anniversaries.find((item) => item.id === targetId);
+
+  if (!targetItem) {
+    return;
+  }
+
+  anniversaryIdInput.value = targetItem.id;
+  anniversaryNameInput.value = targetItem.name;
+  anniversaryDateInput.value = targetItem.date;
+  anniversaryCategoryInput.value = targetItem.category;
+  anniversaryMemoInput.value = targetItem.memo;
+  saveAnniversaryButton.textContent = "記念日を更新";
+  cancelEditButton.classList.remove("hidden");
+  anniversarySuccess.textContent = "編集モードです。内容を更新して保存してください。";
+  anniversaryError.textContent = "";
+  anniversaryForm.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function resetAnniversaryForm() {
+  anniversaryForm.reset();
+  anniversaryIdInput.value = "";
+  saveAnniversaryButton.textContent = "記念日を追加";
+  cancelEditButton.classList.add("hidden");
+}
+
+function deleteAnniversary(targetId) {
+  const targetItem = appState.anniversaries.find((item) => item.id === targetId);
+
+  if (!targetItem) {
+    return;
+  }
+
+  const confirmed = window.confirm(`「${targetItem.name}」を削除しますか？`);
+  if (!confirmed) {
+    return;
+  }
+
+  appState.anniversaries = appState.anniversaries.filter((item) => item.id !== targetId);
+  saveAppState();
+  renderDashboard();
+  renderAnniversaryList();
+  anniversarySuccess.textContent = "記念日を削除しました。";
+
+  if (anniversaryIdInput.value === targetId) {
+    resetAnniversaryForm();
+  }
+}
+
+function renderDashboard() {
+  const settings = appState.settings;
+
+  if (!settings.personOneName || !settings.personTwoName || !settings.relationshipDate) {
+    emptyDashboard.classList.remove("hidden");
+    dashboardContent.classList.add("hidden");
+    celebrationBanner.classList.add("hidden");
+    renderHighlightCard(null);
+    return;
+  }
+
+  const relationshipDate = parseLocalDate(settings.relationshipDate);
   const today = getToday();
 
   if (!relationshipDate || relationshipDate > today) {
-    summarySection.classList.add('hidden');
-    celebrationBanner.classList.add('hidden');
+    emptyDashboard.classList.remove("hidden");
+    dashboardContent.classList.add("hidden");
+    celebrationBanner.classList.add("hidden");
     return;
   }
 
-  const daysTogether = getDaysBetween(relationshipDate, today) + 1;
-  const nextMonthlyAnniversary = getNextMonthlyAnniversary(relationshipDate, today);
-  const monthlyRemainingDays = getDaysBetween(today, nextMonthlyAnniversary);
-  const nextYearlyAnniversary = getNextYearlyAnniversary(relationshipDate, today);
-  const yearlyRemainingDays = getDaysBetween(today, nextYearlyAnniversary);
+  emptyDashboard.classList.add("hidden");
+  dashboardContent.classList.remove("hidden");
 
-  daysTogetherElement.textContent = `${daysTogether}日`;
-  monthlyCountdownElement.textContent = formatCountdown(monthlyRemainingDays);
-  yearlyCountdownElement.textContent = formatCountdown(yearlyRemainingDays);
-  monthlyMessageElement.textContent = formatAnniversaryMessage(monthlyRemainingDays, '月記念日');
-  yearlyMessageElement.textContent = formatAnniversaryMessage(yearlyRemainingDays, '年記念日');
-  renderCelebrationBanner(monthlyRemainingDays, yearlyRemainingDays);
-  summarySection.classList.remove('hidden');
+  const totalDays = getDaysBetween(relationshipDate, today) + 1;
+  const nextMonthlyDate = getNextMonthlyAnniversary(relationshipDate, today);
+  const nextYearlyDate = getNextYearlyAnniversary(relationshipDate, today);
+  const monthlyRemainingDays = getDaysBetween(today, nextMonthlyDate);
+  const yearlyRemainingDays = getDaysBetween(today, nextYearlyDate);
+
+  coupleTitle.textContent = `${settings.personOneName} と ${settings.personTwoName}`;
+  relationshipDateText.textContent = `${formatDateForDisplay(settings.relationshipDate)}からスタート`;
+  daysTogether.textContent = `${totalDays}日`;
+  monthlyCountdown.textContent = formatRemainingDays(monthlyRemainingDays);
+  yearlyCountdown.textContent = formatRemainingDays(yearlyRemainingDays);
+  monthlyNote.textContent = buildRelationshipAnniversaryText(monthlyRemainingDays, nextMonthlyDate, "月記念日");
+  yearlyNote.textContent = buildRelationshipAnniversaryText(yearlyRemainingDays, nextYearlyDate, "年記念日");
+
+  const todayEvents = getTodayEvents();
+  renderCelebration(todayEvents, monthlyRemainingDays, yearlyRemainingDays, settings);
+  renderHighlightCard(getNearestAnniversary());
 }
 
-function renderCelebrationBanner(monthlyRemainingDays, yearlyRemainingDays) {
-  const celebrationTargets = [];
+function renderCelebration(todayEvents, monthlyRemainingDays, yearlyRemainingDays, settings) {
+  const messages = [];
 
   if (monthlyRemainingDays === 0) {
-    celebrationTargets.push('月記念日');
+    messages.push("今日は月記念日です");
   }
 
   if (yearlyRemainingDays === 0) {
-    celebrationTargets.push('年記念日');
+    messages.push("今日は年記念日です");
   }
 
-  if (celebrationTargets.length === 0) {
-    celebrationBanner.classList.add('hidden');
+  if (todayEvents.length > 0) {
+    messages.push(`今日は「${todayEvents[0].name}」の日です`);
+  }
+
+  if (messages.length === 0) {
+    celebrationBanner.classList.add("hidden");
     return;
   }
 
-  if (celebrationTargets.length === 2) {
-    celebrationMessage.textContent = '今日は月記念日と年記念日の両方です。おめでとうございます。';
-  } else {
-    celebrationMessage.textContent = `今日は大切な${celebrationTargets[0]}です。おめでとうございます。`;
+  celebrationMessage.textContent = `${settings.personOneName}さんと${settings.personTwoName}さん、おめでとうございます。${messages.join("。") }。`;
+  celebrationBanner.classList.remove("hidden");
+}
+
+function renderHighlightCard(item) {
+  if (!item) {
+    highlightBadge.textContent = "準備中";
+    highlightBadge.className = "badge";
+    highlightTitle.textContent = "記念日を登録するとここに表示されます。";
+    highlightDate.textContent = "次に近い任意記念日を自動でピックアップします。";
+    highlightNote.textContent = "カテゴリやメモもあわせて見返せます。";
+    return;
   }
 
-  celebrationBanner.classList.remove('hidden');
+  const relativeText = item.isToday
+    ? "今日の記念日です。"
+    : item.daysUntil <= SOON_DAYS
+      ? `あと${item.daysUntil}日でやってきます。`
+      : `あと${item.daysUntil}日です。`;
+
+  highlightBadge.textContent = item.isToday ? "今日" : item.daysUntil <= SOON_DAYS ? "まもなく" : item.category;
+  highlightBadge.className = `badge ${item.isToday ? "badge--today" : item.daysUntil <= SOON_DAYS ? "badge--soon" : "badge--accent"}`;
+  highlightTitle.textContent = item.name;
+  highlightDate.textContent = `${formatDateForDisplay(item.date)} ・ ${item.category}`;
+  highlightNote.textContent = item.memo ? `${relativeText} メモ：${item.memo}` : relativeText;
 }
 
 function renderAnniversaryList() {
-  anniversaryList.innerHTML = '';
+  const sortedItems = getSortedAnniversaries();
+  anniversaryList.innerHTML = "";
+  anniversaryCount.textContent = `${sortedItems.length}件`;
 
-  if (appData.anniversaries.length === 0) {
-    emptyState.classList.remove('hidden');
+  if (sortedItems.length === 0) {
+    anniversaryListEmpty.classList.remove("hidden");
     return;
   }
 
-  emptyState.classList.add('hidden');
+  anniversaryListEmpty.classList.add("hidden");
 
-  const sortedAnniversaries = [...appData.anniversaries].sort((firstItem, secondItem) => {
-    return firstItem.date.localeCompare(secondItem.date);
-  });
+  sortedItems.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "memory-card";
 
-  sortedAnniversaries.forEach((item) => {
-    const safeMemo = typeof item.memo === 'string' ? item.memo : '';
-    const listItem = document.createElement('li');
-    listItem.className = 'anniversary-item';
+    const top = document.createElement("div");
+    top.className = "memory-card__top";
 
-    const contentArea = document.createElement('div');
-    contentArea.className = 'anniversary-item__content';
+    const left = document.createElement("div");
+    const category = document.createElement("p");
+    category.className = "memory-card__category";
+    category.textContent = item.category;
 
-    const header = document.createElement('div');
-    header.className = 'anniversary-item__header';
-
-    const title = document.createElement('p');
-    title.className = 'anniversary-item__title';
+    const title = document.createElement("h3");
+    title.className = "memory-card__title";
     title.textContent = item.name;
 
-    const dateWrap = document.createElement('div');
-    dateWrap.className = 'anniversary-item__date-wrap';
+    left.append(category, title);
 
-    const dateLabel = document.createElement('span');
-    dateLabel.className = 'anniversary-item__date-label';
-    dateLabel.textContent = 'DATE';
+    const right = document.createElement("div");
+    right.className = "memory-card__date-wrap";
 
-    const date = document.createElement('span');
-    date.className = 'anniversary-item__date';
+    const dateLabel = document.createElement("p");
+    dateLabel.className = "memory-card__date-label";
+    dateLabel.textContent = "Date";
+
+    const date = document.createElement("div");
+    date.className = "memory-card__date";
     date.textContent = formatDateForDisplay(item.date);
 
-    dateWrap.append(dateLabel, date);
-    header.append(title, dateWrap);
+    right.append(dateLabel, date);
+    top.append(left, right);
 
-    const details = document.createElement('div');
-    details.className = 'anniversary-item__details';
+    const meta = document.createElement("p");
+    meta.className = "memory-card__meta";
+    meta.textContent = buildAnniversaryMeta(item);
 
-    const meta = document.createElement('p');
-    meta.className = 'anniversary-item__meta';
-    meta.textContent = '大切な思い出としてブラウザに保存されています。';
-    details.append(meta);
+    const badgeRow = document.createElement("div");
+    badgeRow.className = "hero-tags";
+    badgeRow.appendChild(createStatusBadge(item));
 
-    if (safeMemo) {
-      const memo = document.createElement('p');
-      memo.className = 'anniversary-item__memo';
-
-      const memoLabel = document.createElement('span');
-      memoLabel.className = 'anniversary-item__memo-label';
-      memoLabel.textContent = 'メモ';
-
-      memo.append(memoLabel, document.createTextNode(`：${safeMemo}`));
-      details.append(memo);
+    if (item.memo) {
+      const memo = document.createElement("p");
+      memo.className = "memory-card__memo";
+      memo.textContent = `メモ：${item.memo}`;
+      card.append(top, badgeRow, meta, memo, createActionRow(item.id));
+    } else {
+      card.append(top, badgeRow, meta, createActionRow(item.id));
     }
 
-    contentArea.append(header, details);
-
-    const deleteButton = document.createElement('button');
-    deleteButton.type = 'button';
-    deleteButton.className = 'delete-button';
-    deleteButton.dataset.deleteId = item.id;
-    deleteButton.textContent = '削除する';
-
-    listItem.append(contentArea, deleteButton);
-    anniversaryList.appendChild(listItem);
+    anniversaryList.appendChild(card);
   });
 }
 
-function getNextMonthlyAnniversary(baseDate, today) {
-  const thisMonthAnniversary = createAdjustedDate(today.getFullYear(), today.getMonth(), baseDate.getDate());
+function createStatusBadge(item) {
+  const status = document.createElement("span");
+  status.className = "badge";
 
-  if (thisMonthAnniversary >= today) {
-    return thisMonthAnniversary;
+  if (item.isToday) {
+    status.classList.add("badge--today");
+    status.textContent = "今日";
+    return status;
   }
 
+  if (item.daysUntil <= SOON_DAYS) {
+    status.classList.add("badge--soon");
+    status.textContent = "まもなく";
+    return status;
+  }
+
+  status.textContent = `あと${item.daysUntil}日`;
+  return status;
+}
+
+function createActionRow(itemId) {
+  const row = document.createElement("div");
+  row.className = "memory-card__actions";
+
+  const editButton = document.createElement("button");
+  editButton.type = "button";
+  editButton.className = "icon-button";
+  editButton.dataset.editId = itemId;
+  editButton.textContent = "編集";
+
+  const deleteButton = document.createElement("button");
+  deleteButton.type = "button";
+  deleteButton.className = "icon-button icon-button--danger";
+  deleteButton.dataset.deleteId = itemId;
+  deleteButton.textContent = "削除";
+
+  row.append(editButton, deleteButton);
+  return row;
+}
+
+function getSortedAnniversaries() {
+  const today = getToday();
+
+  return [...appState.anniversaries]
+    .map((item) => {
+      const nextDate = getNextOccurrence(parseLocalDate(item.date), today);
+      const daysUntil = getDaysBetween(today, nextDate);
+
+      return {
+        ...item,
+        nextDate,
+        daysUntil,
+        isToday: daysUntil === 0
+      };
+    })
+    .sort((a, b) => {
+      if (a.daysUntil !== b.daysUntil) {
+        return a.daysUntil - b.daysUntil;
+      }
+      return a.name.localeCompare(b.name, "ja");
+    });
+}
+
+function getNearestAnniversary() {
+  const sorted = getSortedAnniversaries();
+  return sorted[0] || null;
+}
+
+function getTodayEvents() {
+  return getSortedAnniversaries().filter((item) => item.isToday);
+}
+
+function buildRelationshipAnniversaryText(daysRemaining, targetDate, label) {
+  if (daysRemaining === 0) {
+    return `今日は${label}です。`;
+  }
+
+  return `${formatDateForDisplay(formatDateToInputValue(targetDate))}です。`;
+}
+
+function buildAnniversaryMeta(item) {
+  if (item.isToday) {
+    return "今日はこの記念日当日です。";
+  }
+
+  return `次は${formatDateForDisplay(formatDateToInputValue(item.nextDate))}で、あと${item.daysUntil}日です。`;
+}
+
+function clearMessages() {
+  settingsError.textContent = "";
+  settingsSuccess.textContent = "";
+}
+
+function formatRemainingDays(days) {
+  return days === 0 ? "今日です" : `あと${days}日`;
+}
+
+function getNextMonthlyAnniversary(baseDate, today) {
+  const candidate = createAdjustedDate(today.getFullYear(), today.getMonth(), baseDate.getDate());
+  if (candidate >= today) {
+    return candidate;
+  }
   return createAdjustedDate(today.getFullYear(), today.getMonth() + 1, baseDate.getDate());
 }
 
 function getNextYearlyAnniversary(baseDate, today) {
-  const thisYearAnniversary = createAdjustedDate(today.getFullYear(), baseDate.getMonth(), baseDate.getDate());
+  const candidate = createAdjustedDate(today.getFullYear(), baseDate.getMonth(), baseDate.getDate());
+  if (candidate >= today) {
+    return candidate;
+  }
+  return createAdjustedDate(today.getFullYear() + 1, baseDate.getMonth(), baseDate.getDate());
+}
 
-  if (thisYearAnniversary >= today) {
-    return thisYearAnniversary;
+function getNextOccurrence(originalDate, today) {
+  if (!originalDate) {
+    return today;
   }
 
-  return createAdjustedDate(today.getFullYear() + 1, baseDate.getMonth(), baseDate.getDate());
+  const candidate = createAdjustedDate(today.getFullYear(), originalDate.getMonth(), originalDate.getDate());
+  if (candidate >= today) {
+    return candidate;
+  }
+  return createAdjustedDate(today.getFullYear() + 1, originalDate.getMonth(), originalDate.getDate());
 }
 
 function createAdjustedDate(year, monthIndex, day) {
   const lastDay = new Date(year, monthIndex + 1, 0).getDate();
-  const safeDay = Math.min(day, lastDay);
-  return new Date(year, monthIndex, safeDay);
+  return new Date(year, monthIndex, Math.min(day, lastDay));
 }
 
-function parseLocalDate(dateText) {
-  if (!dateText) {
+function parseLocalDate(value) {
+  if (!value || typeof value !== "string") {
     return null;
   }
 
-  const [year, month, day] = dateText.split('-').map(Number);
-
-  if (!year || !month || !day) {
+  const parts = value.split("-").map(Number);
+  if (parts.length !== 3 || parts.some(Number.isNaN)) {
     return null;
   }
 
-  const parsedDate = new Date(year, month - 1, day);
+  const [year, month, day] = parts;
+  const date = new Date(year, month - 1, day);
 
   if (
-    parsedDate.getFullYear() !== year ||
-    parsedDate.getMonth() !== month - 1 ||
-    parsedDate.getDate() !== day
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
   ) {
     return null;
   }
 
-  return parsedDate;
+  return date;
 }
 
 function getToday() {
@@ -356,30 +622,26 @@ function getToday() {
 }
 
 function getDaysBetween(startDate, endDate) {
-  const millisecondsPerDay = 1000 * 60 * 60 * 24;
-  return Math.round((endDate - startDate) / millisecondsPerDay);
+  const oneDay = 24 * 60 * 60 * 1000;
+  return Math.round((endDate - startDate) / oneDay);
 }
 
-function formatCountdown(remainingDays) {
-  return remainingDays === 0 ? '今日です' : `あと${remainingDays}日`;
-}
-
-function formatAnniversaryMessage(remainingDays, anniversaryType) {
-  return remainingDays === 0
-    ? `今日は${anniversaryType}です。おめでとうございます。`
-    : `${anniversaryType}まで穏やかにカウントします。`;
-}
-
-function formatDateForDisplay(dateText) {
-  const date = parseLocalDate(dateText);
-
+function formatDateForDisplay(value) {
+  const date = value instanceof Date ? value : parseLocalDate(value);
   if (!date) {
-    return dateText;
+    return "-";
   }
 
   return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
 }
 
+function formatDateToInputValue(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function createId() {
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 }
