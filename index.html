@@ -3,195 +3,254 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>2人の記念日カウント | 習慣化ダッシュボード</title>
+    <title>2人の記念日カウント</title>
     <meta
       name="description"
-      content="2人の記念日を忘れず、毎日開きたくなる習慣化をサポートするスマホ向けWebアプリ。"
+      content="2人の大切な記念日をスマホで見やすく管理できる、下部ナビ付きの軽量Webアプリです。"
     />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <main class="app-shell">
-      <header class="hero card" id="home">
-        <div class="hero__content">
-          <p class="eyebrow">Habit Anniversary App</p>
+    <div class="app-shell">
+      <header class="app-header">
+        <div>
+          <p class="app-header__eyebrow">Mini Anniversary App</p>
           <h1>2人の記念日カウント</h1>
-          <p class="hero__text">忘れない・続けたくなる仕組みで、2人の大切な日をやさしく積み重ねる習慣化アプリです。</p>
         </div>
-        <div class="hero__today">
-          <span>今日</span>
-          <strong id="today-label">--</strong>
-        </div>
+        <button id="header-add-button" class="icon-button" type="button" aria-label="記念日を追加">
+          ＋
+        </button>
       </header>
 
-      <section id="notification-area" class="notification-stack" aria-live="polite"></section>
+      <main class="screen-container">
+        <section class="screen is-active" id="screen-home" data-screen="home" aria-label="ホーム画面">
+          <div class="screen-scroll">
+            <section class="hero-card card">
+              <div>
+                <p class="section-eyebrow">今日のふたり</p>
+                <h2 id="home-pair-names">名前を設定してください</h2>
+                <p id="home-date-label" class="muted-text">設定画面から付き合った日を登録できます。</p>
+              </div>
+              <div class="hero-card__date">
+                <span>今日</span>
+                <strong id="today-label">--</strong>
+              </div>
+            </section>
 
-      <section class="card highlight-card">
-        <div>
-          <p class="eyebrow">Today</p>
-          <h2>今日のひとこと</h2>
-        </div>
-        <p id="daily-message" class="daily-message">今日も2人の記録をのぞいてみましょう。</p>
-      </section>
+            <section id="home-empty-state" class="empty-state card hidden">
+              <h3>最初の設定からはじめましょう</h3>
+              <p>
+                まずは2人の名前と付き合った日を登録してください。次に、初デートや旅行などの記念日を追加するとホームが充実します。
+              </p>
+              <div class="empty-state__actions">
+                <button id="empty-go-settings" class="primary-button" type="button">設定する</button>
+                <button id="empty-go-add" class="secondary-button" type="button">記念日を追加</button>
+              </div>
+            </section>
 
-      <section class="stats-grid">
-        <article class="card stat-card stat-card--accent">
-          <p class="stat-card__label">連続チェック</p>
-          <p id="streak-count" class="stat-card__value">0日</p>
-          <p class="stat-card__note">毎日少しだけでも開く習慣に。</p>
-        </article>
-        <article class="card stat-card stat-card--soft">
-          <p class="stat-card__label">今月の利用</p>
-          <p id="monthly-open-count" class="stat-card__value">0回</p>
-          <p class="stat-card__note">今月どれくらい続けられているかを可視化。</p>
-        </article>
-      </section>
+            <section id="home-content" class="hidden">
+              <section class="stats-grid">
+                <article class="stat-card card stat-card--accent">
+                  <p class="stat-card__label">付き合ってから</p>
+                  <p id="days-together" class="stat-card__value">0日</p>
+                  <p class="stat-card__hint">今日までの積み重ね</p>
+                </article>
+                <article class="stat-card card">
+                  <p class="stat-card__label">次の月記念日</p>
+                  <p id="next-monthly-count" class="stat-card__value">あと--日</p>
+                  <p id="next-monthly-date" class="stat-card__hint">--</p>
+                </article>
+                <article class="stat-card card">
+                  <p class="stat-card__label">次の年記念日</p>
+                  <p id="next-yearly-count" class="stat-card__value">あと--日</p>
+                  <p id="next-yearly-date" class="stat-card__hint">--</p>
+                </article>
+              </section>
 
-      <section class="card" aria-labelledby="summary-heading">
-        <div class="section-header">
-          <div>
-            <p class="eyebrow">Summary</p>
-            <h2 id="summary-heading">ふたりの今日</h2>
+              <section id="special-message-card" class="message-card card hidden">
+                <p class="section-eyebrow">お祝いメッセージ</p>
+                <h3 id="special-message-title">今日は特別な日です</h3>
+                <p id="special-message-body" class="muted-text"></p>
+              </section>
+
+              <section class="feature-card card">
+                <div class="section-head">
+                  <div>
+                    <p class="section-eyebrow">直近の記念日</p>
+                    <h3>次に大切な予定</h3>
+                  </div>
+                </div>
+                <div id="home-next-anniversary"></div>
+              </section>
+            </section>
           </div>
-          <button class="button button--ghost" type="button" data-nav-target="settings">設定を開く</button>
-        </div>
+        </section>
 
-        <div id="empty-state" class="empty-state hidden">
-          <p class="empty-state__title">まずは記念日を追加してみましょう。</p>
-          <p class="empty-state__text">名前と付き合った日を登録すると、通知・カウント・習慣化機能が動き始めます。</p>
-          <button id="empty-cta" class="button button--large" type="button">追加画面へ進む</button>
-        </div>
-
-        <div id="summary-content" class="summary-grid hidden">
-          <article class="summary-tile">
-            <p class="summary-tile__label">2人の名前</p>
-            <h3 id="pair-names" class="summary-tile__title">-</h3>
-            <p id="relationship-date-label" class="summary-tile__sub">-</p>
-          </article>
-          <article class="summary-tile">
-            <p class="summary-tile__label">出会って</p>
-            <p id="days-together" class="summary-tile__number">0日目</p>
-            <p class="summary-tile__sub">今日までの積み重ね</p>
-          </article>
-          <article class="summary-tile">
-            <p class="summary-tile__label">次の記念日</p>
-            <p id="next-anniversary-count" class="summary-tile__number">あと0日</p>
-            <p id="next-anniversary-label" class="summary-tile__sub">まだありません</p>
-          </article>
-        </div>
-      </section>
-
-      <section class="card" id="timeline" aria-labelledby="timeline-heading">
-        <div class="section-header">
-          <div>
-            <p class="eyebrow">Timeline</p>
-            <h2 id="timeline-heading">記念日の一覧</h2>
-          </div>
-        </div>
-        <div id="timeline-list" class="timeline-list"></div>
-        <p id="timeline-empty" class="empty-inline hidden">まだ記念日はありません。下の「追加」から最初の1件を登録してみましょう。</p>
-      </section>
-
-      <section class="card" id="add" aria-labelledby="add-heading">
-        <div class="section-header section-header--stack">
-          <div>
-            <p class="eyebrow">Quick Add</p>
-            <h2 id="add-heading">記念日を追加</h2>
-            <p class="section-text">よくある記念日はワンタップで入力補助。日付だけ選べばすぐ登録できます。</p>
-          </div>
-          <div class="quick-buttons" aria-label="よくある記念日">
-            <button class="chip-button" type="button" data-quick-name="初デート">初デート</button>
-            <button class="chip-button" type="button" data-quick-name="初旅行">初旅行</button>
-            <button class="chip-button" type="button" data-quick-name="告白">告白</button>
-            <button class="chip-button" type="button" data-quick-name="記念日ディナー">記念日ディナー</button>
-          </div>
-        </div>
-
-        <form id="anniversary-form" class="form" novalidate>
-          <input id="editing-id" type="hidden" />
-          <label class="field">
-            <span class="field__label">記念日の名前</span>
-            <input id="anniversary-name" type="text" maxlength="40" placeholder="例：初デート" required />
-            <small id="anniversary-name-error" class="field__error"></small>
-          </label>
-          <label class="field">
-            <span class="field__label">日付</span>
-            <input id="anniversary-date" type="date" required />
-            <small id="anniversary-date-error" class="field__error"></small>
-          </label>
-          <label class="field">
-            <span class="field__label">メモ</span>
-            <textarea id="anniversary-note" rows="3" maxlength="120" placeholder="ちょっとした一言を残せます"></textarea>
-          </label>
-          <div class="form-actions">
-            <button class="button button--large" type="submit">保存する</button>
-            <button id="cancel-edit" class="button button--secondary hidden" type="button">編集をやめる</button>
-          </div>
-          <p id="form-message" class="message" aria-live="polite"></p>
-        </form>
-      </section>
-
-      <section class="card" id="settings" aria-labelledby="settings-heading">
-        <div class="section-header">
-          <div>
-            <p class="eyebrow">Settings</p>
-            <h2 id="settings-heading">設定</h2>
-          </div>
-        </div>
-        <form id="settings-form" class="form" novalidate>
-          <label class="field">
-            <span class="field__label">1人目の名前</span>
-            <input id="person-one" type="text" maxlength="20" placeholder="例：ゆう" required />
-            <small id="person-one-error" class="field__error"></small>
-          </label>
-          <label class="field">
-            <span class="field__label">2人目の名前</span>
-            <input id="person-two" type="text" maxlength="20" placeholder="例：みお" required />
-            <small id="person-two-error" class="field__error"></small>
-          </label>
-          <label class="field">
-            <span class="field__label">付き合った日</span>
-            <input id="relationship-date" type="date" required />
-            <small id="relationship-date-error" class="field__error"></small>
-          </label>
-          <fieldset class="field fieldset">
-            <legend class="field__label">通知表示</legend>
-            <label class="toggle-row">
-              <input id="notification-enabled" type="checkbox" />
-              <span>画面内通知を表示する</span>
-            </label>
-          </fieldset>
-          <fieldset class="field fieldset">
-            <legend class="field__label">テーマカラー</legend>
-            <div class="theme-options">
-              <label class="theme-option">
-                <input type="radio" name="theme-color" value="peach" checked />
-                <span>ピーチ</span>
+        <section class="screen" id="screen-list" data-screen="list" aria-label="記念日一覧画面">
+          <div class="screen-scroll">
+            <section class="toolbar card">
+              <div>
+                <p class="section-eyebrow">検索と絞り込み</p>
+                <h2>記念日一覧</h2>
+              </div>
+              <label class="field">
+                <span class="field__label">検索</span>
+                <input id="search-input" type="search" placeholder="記念日名やメモを検索" />
               </label>
-              <label class="theme-option">
-                <input type="radio" name="theme-color" value="mint" />
-                <span>ミント</span>
+              <label class="field">
+                <span class="field__label">カテゴリ</span>
+                <select id="category-filter"></select>
               </label>
-              <label class="theme-option">
-                <input type="radio" name="theme-color" value="lavender" />
-                <span>ラベンダー</span>
-              </label>
-            </div>
-          </fieldset>
-          <div class="form-actions">
-            <button class="button button--large" type="submit">設定を保存</button>
-          </div>
-          <p id="settings-message" class="message" aria-live="polite"></p>
-        </form>
-      </section>
-    </main>
+            </section>
 
-    <nav class="bottom-nav" aria-label="固定ナビゲーション">
-      <button class="bottom-nav__item is-active" type="button" data-nav-target="home">ホーム</button>
-      <button class="bottom-nav__item" type="button" data-nav-target="timeline">タイムライン</button>
-      <button class="bottom-nav__item bottom-nav__item--primary" type="button" data-nav-target="add">追加</button>
-      <button class="bottom-nav__item" type="button" data-nav-target="settings">設定</button>
+            <section id="list-empty-state" class="empty-state card hidden">
+              <h3>記念日がまだありません</h3>
+              <p>「追加」タブから、初デートや旅行などの思い出を登録してみましょう。</p>
+              <button id="list-go-add" class="primary-button" type="button">追加画面へ</button>
+            </section>
+
+            <section id="anniversary-list" class="list-stack"></section>
+          </div>
+        </section>
+
+        <section class="screen" id="screen-editor" data-screen="editor" aria-label="追加編集画面">
+          <div class="screen-scroll">
+            <section class="card form-card">
+              <div class="section-head">
+                <div>
+                  <p class="section-eyebrow">追加 / 編集</p>
+                  <h2 id="editor-title">新しい記念日を追加</h2>
+                </div>
+                <button id="cancel-edit-button" class="ghost-button hidden" type="button">編集をやめる</button>
+              </div>
+
+              <form id="anniversary-form" novalidate>
+                <input id="editing-id" type="hidden" />
+
+                <label class="field">
+                  <span class="field__label">記念日名</span>
+                  <input id="anniversary-name" type="text" maxlength="40" placeholder="例：初デート" />
+                  <small id="anniversary-name-error" class="field__error"></small>
+                </label>
+
+                <label class="field">
+                  <span class="field__label">日付</span>
+                  <input id="anniversary-date" type="date" />
+                  <small id="anniversary-date-error" class="field__error"></small>
+                </label>
+
+                <label class="field">
+                  <span class="field__label">カテゴリ</span>
+                  <select id="anniversary-category"></select>
+                  <small id="anniversary-category-error" class="field__error"></small>
+                </label>
+
+                <label class="field">
+                  <span class="field__label">メモ</span>
+                  <textarea id="anniversary-note" rows="4" maxlength="160" placeholder="その日の思い出をひとこと"></textarea>
+                </label>
+
+                <p id="editor-message" class="form-message" aria-live="polite"></p>
+
+                <div class="sticky-actions">
+                  <button class="primary-button" type="submit">保存する</button>
+                  <button id="save-and-home-button" class="secondary-button" type="button">保存後ホームへ</button>
+                </div>
+              </form>
+            </section>
+          </div>
+        </section>
+
+        <section class="screen" id="screen-settings" data-screen="settings" aria-label="設定画面">
+          <div class="screen-scroll settings-stack">
+            <section class="card settings-card">
+              <div class="section-head">
+                <div>
+                  <p class="section-eyebrow">基本設定</p>
+                  <h2>2人の情報</h2>
+                </div>
+              </div>
+
+              <form id="settings-form" novalidate>
+                <label class="field">
+                  <span class="field__label">1人目の名前</span>
+                  <input id="person-one" type="text" maxlength="20" placeholder="例：ゆう" />
+                  <small id="person-one-error" class="field__error"></small>
+                </label>
+
+                <label class="field">
+                  <span class="field__label">2人目の名前</span>
+                  <input id="person-two" type="text" maxlength="20" placeholder="例：みお" />
+                  <small id="person-two-error" class="field__error"></small>
+                </label>
+
+                <label class="field">
+                  <span class="field__label">付き合った日</span>
+                  <input id="relationship-date" type="date" />
+                  <small id="relationship-date-error" class="field__error"></small>
+                </label>
+
+                <button class="primary-button" type="submit">基本設定を保存</button>
+                <p id="settings-message" class="form-message" aria-live="polite"></p>
+              </form>
+            </section>
+
+            <section class="card settings-card">
+              <p class="section-eyebrow">テーマ</p>
+              <h3>テーマカラー</h3>
+              <div class="theme-options" id="theme-options"></div>
+            </section>
+
+            <section class="card settings-card">
+              <p class="section-eyebrow">バックアップ</p>
+              <h3>JSON書き出し / 読み込み</h3>
+              <p class="muted-text">ブラウザのlocalStorage保存データをJSONでバックアップ・復元できます。</p>
+              <div class="backup-actions">
+                <button id="export-button" class="secondary-button" type="button">JSONを書き出す</button>
+                <label class="secondary-button secondary-button--file">
+                  JSONを読み込む
+                  <input id="import-input" type="file" accept="application/json" hidden />
+                </label>
+              </div>
+              <p id="backup-message" class="form-message" aria-live="polite"></p>
+            </section>
+          </div>
+        </section>
+      </main>
+
+      <div id="toast" class="toast" aria-live="polite"></div>
+    </div>
+
+    <nav class="bottom-nav" aria-label="画面切り替え">
+      <button class="bottom-nav__item is-active" type="button" data-nav="home">
+        <span class="bottom-nav__icon">🏠</span>
+        <span>ホーム</span>
+      </button>
+      <button class="bottom-nav__item" type="button" data-nav="list">
+        <span class="bottom-nav__icon">📋</span>
+        <span>一覧</span>
+      </button>
+      <button class="bottom-nav__item bottom-nav__item--primary" type="button" data-nav="editor">
+        <span class="bottom-nav__icon">✚</span>
+        <span>追加</span>
+      </button>
+      <button class="bottom-nav__item" type="button" data-nav="settings">
+        <span class="bottom-nav__icon">⚙️</span>
+        <span>設定</span>
+      </button>
     </nav>
+
+    <dialog id="confirm-dialog" class="confirm-dialog">
+      <form method="dialog" class="confirm-dialog__content">
+        <p class="section-eyebrow">削除確認</p>
+        <h3>この記念日を削除しますか？</h3>
+        <p id="confirm-dialog-text" class="muted-text">削除すると元に戻せません。</p>
+        <div class="confirm-dialog__actions">
+          <button value="cancel" class="secondary-button" type="submit">キャンセル</button>
+          <button id="confirm-delete-button" value="default" class="danger-button" type="button">削除する</button>
+        </div>
+      </form>
+    </dialog>
 
     <script src="script.js"></script>
   </body>
