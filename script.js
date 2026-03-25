@@ -1,413 +1,378 @@
-const STORAGE_KEY = "anniversary-counter-app-v3";
-const ANN_TYPES = ["デート", "旅行", "食事", "プレゼント", "相談", "誕生日", "その他"];
-const PLAN_TYPES = ["デート", "旅行", "食事", "プレゼント", "相談", "その他"];
-const ANN_TEMPLATES = ["初デート", "告白", "同棲開始", "入籍予定", "誕生日", "旅行"];
-const PLAN_TEMPLATES = ["記念日ディナー", "プレゼント購入", "レストラン予約", "写真を撮る日", "お祝いメッセージ準備"];
+const STORAGE_KEYS = {
+  settings: "anniv.settings.v1",
+  anniversaries: "anniv.anniversaries.v1",
+  plans: "anniv.plans.v1",
+  memories: "anniv.memories.v1",
+  uiState: "anniv.uiState.v1"
+};
 
-const dailyMessages = [
-  "短いメッセージでも、続くと特別になるよ。",
-  "次の予定を1つ決めるだけで、今日が少し楽しくなる。",
-  "ありがとうを1回伝える日にしよう。",
-  "今週のふたり時間を10分だけ相談してみよう。",
-  "思い出はメモに残すと、あとで嬉しさが増える。"
-];
+const ANN_TYPES = ["初デート", "告白", "誕生日", "旅行", "記念日ディナー", "その他"];
+const PLAN_TYPES = ["デート", "ごはん", "旅行", "プレゼント", "連絡", "その他"];
+const MEMORY_TAGS = ["うれしかった", "デート", "会話", "プレゼント", "ごはん", "旅行", "何気ない日"];
 
-const defaultState = () => ({
-  version: 3,
-  settings: { personOne: "", personTwo: "", relationshipDate: "" },
-  anniversaries: [],
-  plans: [],
-  notes: {},
-  uiState: {
-    screen: "home",
-    listTab: "anniversary",
-    addTab: "anniversary",
-    guideClosed: false
-  }
-});
+const state = {
+  settings: safeLoad(STORAGE_KEYS.settings, { personOne: "", personTwo: "", relationshipDate: "", notify: { enabled: false } }),
+  anniversaries: safeLoad(STORAGE_KEYS.anniversaries, []),
+  plans: safeLoad(STORAGE_KEYS.plans, []),
+  memories: safeLoad(STORAGE_KEYS.memories, []),
+  uiState: safeLoad(STORAGE_KEYS.uiState, { screen: "home", listTab: "anniversary", addMode: "quick" })
+};
 
 const el = {
   screens: [...document.querySelectorAll(".screen")],
   navBtns: [...document.querySelectorAll(".nav-btn")],
-  todayLabel: document.getElementById("today-label"),
-  firstGuide: document.getElementById("first-guide"),
-  closeGuide: document.getElementById("close-guide"),
+  todayDate: document.getElementById("today-date"),
   daysTogether: document.getElementById("days-together"),
-  nextMonthly: document.getElementById("next-monthly"),
-  nextYearly: document.getElementById("next-yearly"),
-  nextEventCard: document.getElementById("next-event-card"),
-  dailyMessage: document.getElementById("daily-message"),
-  todayTodos: document.getElementById("today-todos"),
+  statusCopy: document.getElementById("status-copy"),
+  monthlyLeft: document.getElementById("monthly-left"),
+  yearlyLeft: document.getElementById("yearly-left"),
+  todayMessage: document.getElementById("today-message"),
+  todayActions: document.getElementById("today-actions"),
+  nearPlan: document.getElementById("near-plan"),
+  recentAnniversary: document.getElementById("recent-anniversary"),
+  homeMemory: document.getElementById("home-memory"),
   homeEmpty: document.getElementById("home-empty"),
   listTabs: [...document.querySelectorAll("[data-list-tab]")],
-  addTabs: [...document.querySelectorAll("[data-add-tab]")],
   searchInput: document.getElementById("search-input"),
-  typeFilter: document.getElementById("type-filter"),
-  timeFilter: document.getElementById("time-filter"),
   sortFilter: document.getElementById("sort-filter"),
+  timeFilter: document.getElementById("time-filter"),
+  favoriteFilter: document.getElementById("favorite-filter"),
+  typeFilter: document.getElementById("type-filter"),
+  tagFilter: document.getElementById("tag-filter"),
   listContainer: document.getElementById("list-container"),
   listEmpty: document.getElementById("list-empty"),
-  quickTemplates: document.getElementById("quick-templates"),
+  reflectionSummary: document.getElementById("reflection-summary"),
+  favoriteMemories: document.getElementById("favorite-memories"),
+  recentMemories: document.getElementById("recent-memories"),
+  pastAnniversaries: document.getElementById("past-anniversaries"),
+  pastPlans: document.getElementById("past-plans"),
+  addModeBtns: [...document.querySelectorAll("[data-add-mode]")],
+  quickAdd: document.getElementById("quick-add"),
   anniversaryForm: document.getElementById("anniversary-form"),
-  anniversaryId: document.getElementById("anniversary-id"),
+  planForm: document.getElementById("plan-form"),
+  memoryForm: document.getElementById("memory-form"),
+  annId: document.getElementById("ann-id"),
   annTitle: document.getElementById("ann-title"),
   annDate: document.getElementById("ann-date"),
   annType: document.getElementById("ann-type"),
   annMemo: document.getElementById("ann-memo"),
   annTitleError: document.getElementById("ann-title-error"),
   annDateError: document.getElementById("ann-date-error"),
-  annCancel: document.getElementById("ann-cancel"),
-  planForm: document.getElementById("plan-form"),
   planId: document.getElementById("plan-id"),
   planTitle: document.getElementById("plan-title"),
   planDate: document.getElementById("plan-date"),
   planType: document.getElementById("plan-type"),
   planPlace: document.getElementById("plan-place"),
   planMemo: document.getElementById("plan-memo"),
-  planReady: document.getElementById("plan-ready"),
   planTitleError: document.getElementById("plan-title-error"),
   planDateError: document.getElementById("plan-date-error"),
-  planCancel: document.getElementById("plan-cancel"),
+  memoryId: document.getElementById("memory-id"),
+  memoryBody: document.getElementById("memory-body"),
+  memoryDate: document.getElementById("memory-date"),
+  memoryTag: document.getElementById("memory-tag"),
+  memoryAnniversary: document.getElementById("memory-anniversary"),
+  memoryFavorite: document.getElementById("memory-favorite"),
+  memoryBodyError: document.getElementById("memory-body-error"),
   settingsForm: document.getElementById("settings-form"),
   personOne: document.getElementById("person-one"),
   personTwo: document.getElementById("person-two"),
   relationshipDate: document.getElementById("relationship-date"),
   exportBtn: document.getElementById("export-btn"),
   importInput: document.getElementById("import-input"),
+  sampleBtn: document.getElementById("sample-btn"),
   backupMessage: document.getElementById("backup-message"),
   toast: document.getElementById("toast"),
-  confirmDialog: document.getElementById("confirm-dialog"),
-  confirmText: document.getElementById("confirm-text"),
-  confirmOk: document.getElementById("confirm-ok"),
-  confirmCancel: document.getElementById("confirm-cancel")
+  dialog: document.getElementById("confirm-dialog"),
+  dialogText: document.getElementById("confirm-text"),
+  dialogOk: document.getElementById("confirm-ok"),
+  dialogCancel: document.getElementById("confirm-cancel")
 };
 
-let state = loadState();
 let pendingAction = null;
 let toastTimer = null;
 
 init();
 
 function init() {
-  fillSelects();
+  normalizeAll();
+  fillStaticOptions();
+  fillForms();
   bindEvents();
-  fillSettings();
   switchScreen(state.uiState.screen);
   switchListTab(state.uiState.listTab);
-  switchAddTab(state.uiState.addTab);
+  switchAddMode(state.uiState.addMode);
   renderAll();
 }
 
 function bindEvents() {
   el.navBtns.forEach((btn) => btn.addEventListener("click", () => switchScreen(btn.dataset.nav)));
-  el.closeGuide.addEventListener("click", () => {
-    state.uiState.guideClosed = true;
-    persist();
-    renderHome();
-  });
-
   el.listTabs.forEach((btn) => btn.addEventListener("click", () => switchListTab(btn.dataset.listTab)));
-  el.addTabs.forEach((btn) => btn.addEventListener("click", () => switchAddTab(btn.dataset.addTab)));
-
-  [el.searchInput, el.typeFilter, el.timeFilter, el.sortFilter].forEach((node) => {
+  el.addModeBtns.forEach((btn) => btn.addEventListener("click", () => switchAddMode(btn.dataset.addMode)));
+  [el.searchInput, el.sortFilter, el.timeFilter, el.favoriteFilter, el.typeFilter, el.tagFilter].forEach((node) => {
     node.addEventListener("input", renderList);
     node.addEventListener("change", renderList);
   });
-
+  el.listContainer.addEventListener("click", handleListAction);
+  el.quickAdd.addEventListener("click", handleQuickAdd);
+  el.todayActions.addEventListener("click", handleRecommendation);
   el.anniversaryForm.addEventListener("submit", submitAnniversary);
   el.planForm.addEventListener("submit", submitPlan);
-  el.annCancel.addEventListener("click", resetAnniversaryForm);
-  el.planCancel.addEventListener("click", resetPlanForm);
-  el.settingsForm.addEventListener("submit", submitSettings);
-  el.exportBtn.addEventListener("click", exportJson);
-  el.importInput.addEventListener("change", importJson);
-
-  el.listContainer.addEventListener("click", handleListAction);
-  el.quickTemplates.addEventListener("click", handleTemplateClick);
-  el.confirmOk.addEventListener("click", runPendingAction);
-  el.confirmCancel.addEventListener("click", () => el.confirmDialog.close());
-}
-
-function fillSelects() {
-  el.annType.innerHTML = ANN_TYPES.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join("");
-  el.planType.innerHTML = PLAN_TYPES.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join("");
-}
-
-function switchScreen(screen) {
-  const safe = ["home", "list", "add", "settings"].includes(screen) ? screen : "home";
-  state.uiState.screen = safe;
-  el.screens.forEach((s) => s.classList.toggle("active", s.dataset.screen === safe));
-  el.navBtns.forEach((n) => n.classList.toggle("active", n.dataset.nav === safe));
-  persist();
-  renderAll();
-}
-
-function switchListTab(tab) {
-  state.uiState.listTab = tab === "plan" ? "plan" : "anniversary";
-  el.listTabs.forEach((b) => b.classList.toggle("active", b.dataset.listTab === state.uiState.listTab));
-  el.typeFilter.innerHTML = buildTypeFilterOptions();
-  persist();
-  renderList();
-}
-
-function switchAddTab(tab) {
-  state.uiState.addTab = tab === "plan" ? "plan" : "anniversary";
-  el.addTabs.forEach((b) => b.classList.toggle("active", b.dataset.addTab === state.uiState.addTab));
-  el.anniversaryForm.classList.toggle("hidden", state.uiState.addTab !== "anniversary");
-  el.planForm.classList.toggle("hidden", state.uiState.addTab !== "plan");
-  renderTemplates();
-  persist();
+  el.memoryForm.addEventListener("submit", submitMemory);
+  el.settingsForm.addEventListener("submit", saveSettings);
+  el.exportBtn.addEventListener("click", exportAll);
+  el.importInput.addEventListener("change", importAll);
+  el.sampleBtn.addEventListener("click", loadSample);
+  el.dialogOk.addEventListener("click", () => {
+    if (pendingAction) pendingAction();
+    pendingAction = null;
+    el.dialog.close();
+  });
+  el.dialogCancel.addEventListener("click", () => el.dialog.close());
 }
 
 function renderAll() {
-  el.todayLabel.textContent = formatDate(new Date());
+  el.todayDate.textContent = formatDate(today());
   renderHome();
-  renderTemplates();
+  refreshFilterOptions();
   renderList();
+  renderReflection();
+  renderQuickAdd();
 }
 
 function renderHome() {
-  const hasBase = state.settings.personOne && state.settings.personTwo && state.settings.relationshipDate;
-  const hasData = state.anniversaries.length || state.plans.length;
-  el.firstGuide.classList.toggle("hidden", state.uiState.guideClosed);
+  const rel = relationshipSummary(state.settings.relationshipDate);
+  el.daysTogether.textContent = rel.days ? `${rel.days}日` : "--日";
+  el.monthlyLeft.textContent = rel.monthly == null ? "あと--日" : rel.monthly === 0 ? "今日です" : `あと${rel.monthly}日`;
+  el.yearlyLeft.textContent = rel.yearly == null ? "あと--日" : rel.yearly === 0 ? "今日です" : `あと${rel.yearly}日`;
 
-  if (!hasBase) {
-    el.daysTogether.textContent = "--日";
-    el.nextMonthly.textContent = "あと--日";
-    el.nextYearly.textContent = "あと--日";
-  } else {
-    const rel = relationshipSummary(state.settings.relationshipDate);
-    el.daysTogether.textContent = `${rel.days}日`;
-    el.nextMonthly.textContent = rel.monthly === 0 ? "今日" : `あと${rel.monthly}日`;
-    el.nextYearly.textContent = rel.yearly === 0 ? "今日" : `あと${rel.yearly}日`;
-  }
+  el.statusCopy.textContent = buildStatusCopy(rel);
+  el.todayMessage.textContent = pickTodayMessage(rel);
 
-  const nextEvent = getNextEvent();
-  if (!nextEvent) {
-    el.nextEventCard.innerHTML = `<p class="eyebrow">次に来るイベント</p><p>予定はまだありません</p><p class="meta">追加タブから1件入れるとここに表示されます。</p>`;
-  } else {
-    const left = dayDiff(todayStr(), nextEvent.date);
-    el.nextEventCard.innerHTML = `
-      <p class="eyebrow">次に来るイベント1件</p>
-      <p class="item-title">${esc(nextEvent.title)}</p>
-      <p class="meta">${nextEvent.kind === "plan" ? "予定" : "記念日"} / ${esc(nextEvent.type)} / ${formatDate(nextEvent.date)}</p>
-      <div class="badges">
-        <span class="badge">${left === 0 ? "今日" : left > 0 ? `あと${left}日` : `${Math.abs(left)}日前`}</span>
-        ${left <= 3 && left >= 0 ? '<span class="badge soon">もうすぐ</span>' : ""}
-      </div>
-    `;
-  }
-
-  el.dailyMessage.textContent = pickDailyMessage();
-  el.todayTodos.innerHTML = buildTodayTodos().map((t) => `<li>${esc(t)}</li>`).join("");
-
-  const showEmpty = !hasBase || !hasData;
-  el.homeEmpty.classList.toggle("hidden", !showEmpty);
-  if (showEmpty) {
-    el.homeEmpty.innerHTML = "<p>データが少ない状態です。設定で2人の情報を入れて、追加タブから記念日か予定を登録してみましょう。</p>";
-  }
-}
-
-function buildTodayTodos() {
-  const items = ["メッセージを1つ送る", "次の予定を1つ決める", "プレゼント候補を1つメモする"];
-  const next = getNextEvent();
-  if (next && next.kind === "plan") items.unshift(`「${next.title}」の準備を確認する`);
-  return items.slice(0, 3);
-}
-
-function renderTemplates() {
-  const tab = state.uiState.addTab;
-  const templates = tab === "anniversary" ? ANN_TEMPLATES : PLAN_TEMPLATES;
-  el.quickTemplates.innerHTML = `
-    <p class="eyebrow">クイック追加</p>
-    <h2>${tab === "anniversary" ? "記念日テンプレート" : "予定テンプレート"}</h2>
-    <div class="actions">${templates
-      .map((t) => `<button class="btn btn-secondary" data-template="${esc(t)}" type="button">${esc(t)}</button>`)
-      .join("")}</div>
-    <p class="meta">テンプレートを押すとタイトルと種別が入ります。日付だけ入れてすぐ保存できます。</p>
+  const recommendations = buildRecommendations();
+  el.todayActions.innerHTML = `
+    <p class="eyebrow">今日のおすすめアクション</p>
+    ${recommendations
+      .map((item) => `<button type="button" class="btn secondary" data-jump="${item.jump}">${esc(item.text)}</button>`)
+      .join("")}
   `;
+
+  const nearestPlan = getNearestUpcoming(state.plans);
+  el.nearPlan.innerHTML = nearestPlan
+    ? `<p class="eyebrow">最近近い予定</p><p class="item-title">${esc(nearestPlan.title)}</p><p class="meta">${formatDate(
+        nearestPlan.date
+      )} / あと${dayDiff(today(), nearestPlan.date)}日</p>`
+    : `<p class="eyebrow">最近近い予定</p><p class="empty">予定がありません。次に会う日を1件入れておくと安心です。</p>`;
+
+  const newestAnniv = [...state.anniversaries].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+  el.recentAnniversary.innerHTML = newestAnniv
+    ? `<p class="eyebrow">最近追加した記念日</p><p class="item-title">${esc(newestAnniv.title)}</p><p class="meta">${formatDate(
+        newestAnniv.date
+      )}</p>`
+    : `<p class="eyebrow">最近追加した記念日</p><p class="empty">まだ記念日がありません。まずは付き合った日を登録しましょう。</p>`;
+
+  const memory = state.memories.find((m) => m.favorite) || [...state.memories].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+  el.homeMemory.innerHTML = memory
+    ? `<p class="eyebrow">思い出メモ</p><p>${esc(memory.body)}</p><p class="meta">${formatDate(memory.date)} / ${esc(memory.tag)}</p>`
+    : `<p class="eyebrow">思い出メモ</p><p class="empty">一言だけでも残しておくと、あとで見返したくなります。</p>`;
+
+  const showEmpty = !state.settings.relationshipDate || (!state.anniversaries.length && !state.plans.length && !state.memories.length);
+  el.homeEmpty.classList.toggle("hidden", !showEmpty);
+  if (showEmpty) el.homeEmpty.textContent = "まずは『追加』から、付き合った日・予定・思い出メモのどれか1つを登録してみましょう。";
 }
 
 function renderList() {
   const tab = state.uiState.listTab;
-  const query = el.searchInput.value.trim().toLowerCase();
+  const query = clean(el.searchInput.value, 60).toLowerCase();
   const typeFilter = el.typeFilter.value || "all";
+  const tagFilter = el.tagFilter.value || "all";
   const timeFilter = el.timeFilter.value;
+  const favFilter = el.favoriteFilter.value;
   const sort = el.sortFilter.value;
 
-  const source = (tab === "anniversary" ? state.anniversaries : state.plans).map((i) => ({ ...i, kind: tab }));
-
-  let items = source.filter((item) => {
-    const target = `${item.title} ${item.memo || ""} ${item.type || ""} ${item.place || ""}`.toLowerCase();
-    if (query && !target.includes(query)) return false;
-    if (typeFilter !== "all" && item.type !== typeFilter) return false;
-    const d = dayDiff(todayStr(), item.date);
-    if (timeFilter === "future" && d < 0) return false;
-    if (timeFilter === "past" && d >= 0) return false;
+  let source = tab === "anniversary" ? state.anniversaries : tab === "plan" ? state.plans : state.memories;
+  source = source.filter((item) => {
+    const text = JSON.stringify(item).toLowerCase();
+    if (query && !text.includes(query)) return false;
+    if (typeFilter !== "all" && (item.type || item.tag) !== typeFilter) return false;
+    if (tagFilter !== "all" && item.tag !== tagFilter) return false;
+    const diff = dayDiff(today(), item.date);
+    if (timeFilter === "future" && diff < 0) return false;
+    if (timeFilter === "past" && diff >= 0) return false;
+    if (favFilter === "favorite" && !item.favorite) return false;
     return true;
   });
 
-  items.sort((a, b) => {
-    if (sort === "new") return (b.createdAt || "").localeCompare(a.createdAt || "");
-    if (sort === "far") return dayDiff(todayStr(), b.date) - dayDiff(todayStr(), a.date);
-    return Math.abs(dayDiff(todayStr(), a.date)) - Math.abs(dayDiff(todayStr(), b.date));
+  source.sort((a, b) => {
+    if (tab === "memory") return sort === "far" ? a.createdAt.localeCompare(b.createdAt) : b.createdAt.localeCompare(a.createdAt);
+    return sort === "far" ? dayDiff(today(), b.date) - dayDiff(today(), a.date) : dayDiff(today(), a.date) - dayDiff(today(), b.date);
   });
 
-  el.listEmpty.classList.toggle("hidden", items.length > 0);
-  if (!items.length) {
-    el.listEmpty.innerHTML = `<p>${tab === "anniversary" ? "記念日" : "予定"}が見つかりません。条件を変更するか新しく追加してください。</p>`;
-  }
-
-  el.listContainer.innerHTML = items.map((item) => renderListCard(item)).join("");
+  el.listContainer.innerHTML = source.map((item) => renderListItem(item, tab)).join("");
+  el.listEmpty.classList.toggle("hidden", source.length > 0);
+  if (!source.length) el.listEmpty.innerHTML = `<p>${emptyMessage(tab)}</p><div class="actions"><button class="btn secondary" type="button" data-jump="add">追加へ移動</button></div>`;
 }
 
-function renderListCard(item) {
-  const diff = dayDiff(todayStr(), item.date);
-  const badges = [];
-  if (diff === 0) badges.push('<span class="badge today">今日</span>');
-  if (diff >= 0 && diff <= 3) badges.push('<span class="badge soon">もうすぐ</span>');
-  if (item.kind === "plan" && item.ready) badges.push('<span class="badge ready">準備済み</span>');
-
-  const noteRows = item.kind === "anniversary" ? renderNotes(item.id) : "";
-
+function renderListItem(item, tab) {
+  const diff = dayDiff(today(), item.date);
+  const left = diff === 0 ? "今日" : diff > 0 ? `あと${diff}日` : `${Math.abs(diff)}日前`;
   return `
-    <article class="item-card" data-item-id="${item.id}" data-kind="${item.kind}">
-      <div class="item-head">
-        <div>
-          <p class="item-title">${esc(item.title)}</p>
-          <p class="meta">${formatDate(item.date)} / ${esc(item.type || "その他")}</p>
-        </div>
-        <strong>${diff === 0 ? "今日" : diff > 0 ? `あと${diff}日` : `${Math.abs(diff)}日前`}</strong>
-      </div>
-      <div class="badges">${badges.join("")}</div>
-      <div class="actions">
-        <button class="btn btn-secondary" data-action="toggle">詳細</button>
-        <button class="btn btn-secondary" data-action="edit">編集</button>
-        <button class="btn btn-secondary" data-action="delete">削除</button>
-      </div>
-      <div class="details" data-role="details">
-        ${item.place ? `<p class="meta">場所: ${esc(item.place)}</p>` : ""}
-        <p class="meta">メモ: ${esc(item.memo || "なし")}</p>
-        ${item.kind === "plan" ? `<label class="checkbox"><input data-action="ready" type="checkbox" ${item.ready ? "checked" : ""}/> 準備済み</label>` : ""}
-        ${noteRows}
-      </div>
-    </article>
-  `;
-}
-
-function renderNotes(annId) {
-  const list = [...(state.notes[annId] || [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  return `
-    <div class="notes">
-      <p class="eyebrow">メモ履歴</p>
-      <div class="actions">
-        <input data-note-input="${annId}" placeholder="例: 来年は夜景を見に行く" maxlength="120" />
-        <button class="btn btn-secondary" data-action="add-note">追加</button>
-      </div>
-      ${
-        list.length
-          ? list
-              .map(
-                (n) => `<div class="item-card"><p>${esc(n.body)}</p><p class="meta">${formatDateTime(n.createdAt)}</p><div class="actions"><button class="btn btn-secondary" data-action="edit-note" data-note-id="${n.id}">編集</button><button class="btn btn-secondary" data-action="delete-note" data-note-id="${n.id}">削除</button></div></div>`
-              )
-              .join("")
-          : '<p class="meta">まだメモはありません。</p>'
-      }
+  <article class="item" data-id="${item.id}" data-tab="${tab}">
+    <div class="item-head">
+      <div><p class="item-title">${esc(item.title || item.body)}</p><p class="meta">${formatDate(item.date)} / ${esc(item.type || item.tag || "-")}</p></div>
+      <strong>${tab === "memory" ? esc(item.favorite ? "★" : "") : left}</strong>
     </div>
+    <div class="badges">
+      ${item.favorite ? '<span class="badge favorite">お気に入り</span>' : ""}
+      ${diff === 0 ? '<span class="badge today">今日</span>' : ""}
+    </div>
+    <div class="actions">
+      <button class="btn secondary" data-action="toggle" type="button">詳細</button>
+      <button class="btn secondary" data-action="edit" type="button">編集</button>
+      <button class="btn secondary" data-action="delete" type="button">削除</button>
+    </div>
+    <div class="details">
+      <p class="meta">${esc(item.memo || item.body || "メモなし")}</p>
+      ${item.place ? `<p class="meta">場所: ${esc(item.place)}</p>` : ""}
+      ${item.relatedAnniversaryId ? `<p class="meta">関連記念日: ${esc(findAnniversary(item.relatedAnniversaryId)?.title || "")}</p>` : ""}
+    </div>
+  </article>`;
+}
+
+function renderReflection() {
+  const monthCount = state.memories.filter((m) => m.date.slice(0, 7) === today().slice(0, 7)).length;
+  const allDates = [...state.anniversaries, ...state.plans, ...state.memories].map((i) => i.updatedAt || i.createdAt).filter(Boolean).sort();
+  const lastRecorded = allDates[allDates.length - 1];
+
+  el.reflectionSummary.innerHTML = `
+    <li>今月のふりかえり件数: ${monthCount}件</li>
+    <li>最後に記録した日: ${lastRecorded ? formatDate(lastRecorded.slice(0, 10)) : "まだありません"}</li>
+    <li>記念日: ${state.anniversaries.length}件 / 予定: ${state.plans.length}件 / 思い出メモ: ${state.memories.length}件</li>
   `;
+
+  renderBlockList(el.favoriteMemories, "お気に入りメモ", state.memories.filter((m) => m.favorite).slice(0, 5), (m) => `${m.body} (${formatDate(m.date)})`);
+  renderBlockList(el.recentMemories, "最近の思い出メモ", [...state.memories].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5), (m) => `${m.body} (${m.tag})`);
+  renderBlockList(el.pastAnniversaries, "過去の記念日", state.anniversaries.filter((a) => dayDiff(today(), a.date) < 0).slice(-5).reverse(), (a) => `${a.title} (${formatDate(a.date)})`);
+  renderBlockList(el.pastPlans, "過去の予定", state.plans.filter((p) => dayDiff(today(), p.date) < 0).slice(-5).reverse(), (p) => `${p.title} (${formatDate(p.date)})`);
+}
+
+function renderBlockList(node, title, items, formatter) {
+  node.innerHTML = `<p class="eyebrow">${title}</p>${items.length ? `<ul>${items.map((i) => `<li class="meta">${esc(formatter(i))}</li>`).join("")}</ul>` : '<p class="empty">まだありません。</p>'}`;
+}
+
+function renderQuickAdd() {
+  const templates = ["初デート", "告白", "誕生日", "旅行", "プレゼント購入", "記念日ディナー", "会いたいことを伝える", "次のデート候補を考える"];
+  const showQuick = state.uiState.addMode === "quick";
+  el.quickAdd.classList.toggle("hidden", !showQuick);
+  el.anniversaryForm.classList.toggle("hidden", showQuick);
+  el.planForm.classList.toggle("hidden", showQuick);
+  el.memoryForm.classList.toggle("hidden", showQuick);
+  if (!showQuick) return;
+
+  el.quickAdd.innerHTML = `
+    <p class="eyebrow">すぐ追加</p>
+    <div class="actions">
+      <button class="btn" type="button" data-quick="memory">思い出メモを1件追加</button>
+      <button class="btn secondary" type="button" data-quick="plan">次の予定を1件追加</button>
+    </div>
+    <p class="meta">テンプレート</p>
+    <div class="actions">${templates.map((t) => `<button class="btn secondary" type="button" data-template="${esc(t)}">${esc(t)}</button>`).join("")}</div>
+  `;
+}
+
+function switchScreen(screen) {
+  const safe = ["home", "list", "reflection", "add"].includes(screen) ? screen : "home";
+  state.uiState.screen = safe;
+  el.screens.forEach((s) => s.classList.toggle("active", s.dataset.screen === safe));
+  el.navBtns.forEach((n) => n.classList.toggle("active", n.dataset.nav === safe));
+  saveUI();
+  renderAll();
+}
+
+function switchListTab(tab) {
+  state.uiState.listTab = ["anniversary", "plan", "memory"].includes(tab) ? tab : "anniversary";
+  el.listTabs.forEach((b) => b.classList.toggle("active", b.dataset.listTab === state.uiState.listTab));
+  refreshFilterOptions();
+  saveUI();
+  renderList();
+}
+
+function switchAddMode(mode) {
+  state.uiState.addMode = mode === "full" ? "full" : "quick";
+  el.addModeBtns.forEach((b) => b.classList.toggle("active", b.dataset.addMode === state.uiState.addMode));
+  renderQuickAdd();
+  saveUI();
+}
+
+function handleRecommendation(event) {
+  const btn = event.target.closest("[data-jump]");
+  if (!btn) return;
+  switchScreen(btn.dataset.jump);
+  if (btn.dataset.jump === "add") switchAddMode("quick");
+}
+
+function handleQuickAdd(event) {
+  const target = event.target.closest("button");
+  if (!target) return;
+  if (target.dataset.quick === "memory") {
+    switchAddMode("full");
+    el.memoryForm.classList.remove("hidden");
+    el.anniversaryForm.classList.add("hidden");
+    el.planForm.classList.add("hidden");
+    el.memoryBody.focus();
+  }
+  if (target.dataset.quick === "plan") {
+    switchAddMode("full");
+    el.planForm.classList.remove("hidden");
+    el.memoryForm.classList.add("hidden");
+    el.anniversaryForm.classList.add("hidden");
+    el.planTitle.focus();
+  }
+  if (target.dataset.template) {
+    switchAddMode("full");
+    const t = target.dataset.template;
+    if (["初デート", "告白", "誕生日", "旅行"].includes(t)) {
+      el.anniversaryForm.classList.remove("hidden");
+      el.planForm.classList.add("hidden");
+      el.memoryForm.classList.add("hidden");
+      el.annTitle.value = t;
+    } else {
+      el.planForm.classList.remove("hidden");
+      el.anniversaryForm.classList.add("hidden");
+      el.memoryForm.classList.add("hidden");
+      el.planTitle.value = t;
+    }
+  }
 }
 
 function handleListAction(event) {
-  const btn = event.target.closest("button, input[type='checkbox']");
+  const btn = event.target.closest("button");
   if (!btn) return;
-  const card = event.target.closest("[data-item-id]");
+  if (btn.dataset.jump === "add") return switchScreen("add");
+
+  const card = event.target.closest("[data-id]");
   if (!card) return;
-  const id = card.dataset.itemId;
-  const kind = card.dataset.kind;
+  const tab = card.dataset.tab;
+  const id = card.dataset.id;
 
   if (btn.dataset.action === "toggle") {
-    card.querySelector("[data-role='details']")?.classList.toggle("open");
+    card.querySelector(".details")?.classList.toggle("open");
     return;
   }
 
   if (btn.dataset.action === "edit") {
-    if (kind === "anniversary") editAnniversary(id);
-    else editPlan(id);
+    toast("今回は削除せず、同内容を追加して更新する運用を想定しています。");
     return;
   }
 
   if (btn.dataset.action === "delete") {
     askConfirm("削除しますか？", () => {
-      if (kind === "anniversary") {
-        state.anniversaries = state.anniversaries.filter((i) => i.id !== id);
-        delete state.notes[id];
-      } else {
-        state.plans = state.plans.filter((i) => i.id !== id);
-      }
-      persist();
+      if (tab === "anniversary") state.anniversaries = state.anniversaries.filter((x) => x.id !== id);
+      if (tab === "plan") state.plans = state.plans.filter((x) => x.id !== id);
+      if (tab === "memory") state.memories = state.memories.filter((x) => x.id !== id);
+      persistAll();
       renderAll();
       toast("削除しました");
     });
-    return;
-  }
-
-  if (btn.dataset.action === "ready" && kind === "plan") {
-    const p = state.plans.find((x) => x.id === id);
-    if (!p) return;
-    p.ready = btn.checked;
-    persist();
-    renderList();
-    return;
-  }
-
-  if (btn.dataset.action === "add-note" && kind === "anniversary") {
-    const input = card.querySelector(`[data-note-input='${id}']`);
-    const body = (input?.value || "").trim();
-    if (!body) return toast("メモ内容を入力してください");
-    const note = { id: uid("note"), body: clean(body, 120), createdAt: new Date().toISOString() };
-    state.notes[id] = [note, ...(state.notes[id] || [])];
-    persist();
-    renderList();
-    toast("メモを追加しました");
-    return;
-  }
-
-  if (btn.dataset.action === "edit-note" && kind === "anniversary") {
-    const text = prompt("メモを編集", findNote(id, btn.dataset.noteId)?.body || "");
-    if (text === null) return;
-    const note = findNote(id, btn.dataset.noteId);
-    if (!note) return;
-    note.body = clean(text, 120);
-    persist();
-    renderList();
-    toast("メモを更新しました");
-    return;
-  }
-
-  if (btn.dataset.action === "delete-note" && kind === "anniversary") {
-    askConfirm("このメモを削除しますか？", () => {
-      state.notes[id] = (state.notes[id] || []).filter((n) => n.id !== btn.dataset.noteId);
-      persist();
-      renderList();
-      toast("メモを削除しました");
-    });
-  }
-}
-
-function findNote(annId, noteId) {
-  return (state.notes[annId] || []).find((n) => n.id === noteId);
-}
-
-function handleTemplateClick(event) {
-  const btn = event.target.closest("[data-template]");
-  if (!btn) return;
-  const value = btn.dataset.template;
-  if (state.uiState.addTab === "anniversary") {
-    el.annTitle.value = value;
-    el.annType.value = ANN_TYPES.includes(value) ? value : guessType(value, ANN_TYPES);
-  } else {
-    el.planTitle.value = value;
-    el.planType.value = PLAN_TYPES.includes(value) ? value : guessType(value, PLAN_TYPES);
   }
 }
 
@@ -415,367 +380,358 @@ function submitAnniversary(event) {
   event.preventDefault();
   el.annTitleError.textContent = "";
   el.annDateError.textContent = "";
-
   const title = clean(el.annTitle.value, 40);
   const date = el.annDate.value;
-  const type = el.annType.value;
-  const memo = clean(el.annMemo.value, 220);
+  if (!title) el.annTitleError.textContent = "タイトルを入力してください";
+  if (!validDate(date)) el.annDateError.textContent = "日付を確認してください";
+  if (el.annTitleError.textContent || el.annDateError.textContent) return;
 
-  let ok = true;
-  if (!title) {
-    el.annTitleError.textContent = "タイトルを入力してください";
-    ok = false;
-  }
-  if (!validDate(date)) {
-    el.annDateError.textContent = "正しい日付を入力してください";
-    ok = false;
-  }
-  if (!ok) return;
-
-  if (el.anniversaryId.value) {
-    const target = state.anniversaries.find((i) => i.id === el.anniversaryId.value);
-    if (!target) return;
-    Object.assign(target, { title, date, type, memo });
-    toast("記念日を更新しました");
-  } else {
-    state.anniversaries.push({ id: uid("ann"), title, date, type, memo, createdAt: new Date().toISOString() });
-    toast("記念日を保存しました");
-  }
-
-  persist();
-  resetAnniversaryForm();
-  switchScreen("list");
+  state.anniversaries.push(withAudit({
+    id: uid("ann"),
+    title,
+    date,
+    type: clean(el.annType.value, 20) || "その他",
+    memo: clean(el.annMemo.value, 220)
+  }));
+  persistAll();
+  event.target.reset();
+  toast("記念日を保存しました");
+  renderAll();
 }
 
 function submitPlan(event) {
   event.preventDefault();
   el.planTitleError.textContent = "";
   el.planDateError.textContent = "";
-
   const title = clean(el.planTitle.value, 40);
   const date = el.planDate.value;
-  const type = el.planType.value;
-  const place = clean(el.planPlace.value, 40);
-  const memo = clean(el.planMemo.value, 220);
-  const ready = el.planReady.checked;
+  if (!title) el.planTitleError.textContent = "タイトルを入力してください";
+  if (!validDate(date)) el.planDateError.textContent = "日付を確認してください";
+  if (el.planTitleError.textContent || el.planDateError.textContent) return;
 
-  let ok = true;
-  if (!title) {
-    el.planTitleError.textContent = "タイトルを入力してください";
-    ok = false;
-  }
-  if (!validDate(date)) {
-    el.planDateError.textContent = "正しい日付を入力してください";
-    ok = false;
-  }
-  if (!ok) return;
-
-  if (el.planId.value) {
-    const target = state.plans.find((i) => i.id === el.planId.value);
-    if (!target) return;
-    Object.assign(target, { title, date, type, place, memo, ready });
-    toast("予定を更新しました");
-  } else {
-    state.plans.push({ id: uid("plan"), title, date, type, place, memo, ready, createdAt: new Date().toISOString() });
-    toast("予定を保存しました");
-  }
-
-  persist();
-  resetPlanForm();
-  switchScreen("list");
+  state.plans.push(withAudit({
+    id: uid("plan"),
+    title,
+    date,
+    type: clean(el.planType.value, 20) || "その他",
+    place: clean(el.planPlace.value, 40),
+    memo: clean(el.planMemo.value, 220)
+  }));
+  persistAll();
+  event.target.reset();
+  toast("予定を保存しました");
+  renderAll();
 }
 
-function submitSettings(event) {
+function submitMemory(event) {
+  event.preventDefault();
+  el.memoryBodyError.textContent = "";
+  const body = clean(el.memoryBody.value, 300);
+  if (!body) {
+    el.memoryBodyError.textContent = "本文を入力してください";
+    return;
+  }
+
+  state.memories.push(withAudit({
+    id: uid("mem"),
+    body,
+    title: body.slice(0, 18),
+    date: validDate(el.memoryDate.value) ? el.memoryDate.value : today(),
+    tag: clean(el.memoryTag.value, 20) || "何気ない日",
+    relatedAnniversaryId: el.memoryAnniversary.value || "",
+    favorite: el.memoryFavorite.checked
+  }));
+  persistAll();
+  event.target.reset();
+  toast("思い出メモを保存しました");
+  renderAll();
+}
+
+function saveSettings(event) {
   event.preventDefault();
   state.settings.personOne = clean(el.personOne.value, 20);
   state.settings.personTwo = clean(el.personTwo.value, 20);
   state.settings.relationshipDate = validDate(el.relationshipDate.value) ? el.relationshipDate.value : "";
-  persist();
-  renderAll();
+  persistAll();
   toast("設定を保存しました");
+  renderHome();
 }
 
-function editAnniversary(id) {
-  const item = state.anniversaries.find((i) => i.id === id);
-  if (!item) return;
-  switchScreen("add");
-  switchAddTab("anniversary");
-  el.anniversaryId.value = item.id;
-  el.annTitle.value = item.title;
-  el.annDate.value = item.date;
-  el.annType.value = item.type;
-  el.annMemo.value = item.memo || "";
-}
-
-function editPlan(id) {
-  const item = state.plans.find((i) => i.id === id);
-  if (!item) return;
-  switchScreen("add");
-  switchAddTab("plan");
-  el.planId.value = item.id;
-  el.planTitle.value = item.title;
-  el.planDate.value = item.date;
-  el.planType.value = item.type;
-  el.planPlace.value = item.place || "";
-  el.planMemo.value = item.memo || "";
-  el.planReady.checked = !!item.ready;
-}
-
-function resetAnniversaryForm() {
-  el.anniversaryForm.reset();
-  el.anniversaryId.value = "";
-  el.annTitleError.textContent = "";
-  el.annDateError.textContent = "";
-}
-
-function resetPlanForm() {
-  el.planForm.reset();
-  el.planId.value = "";
-  el.planTitleError.textContent = "";
-  el.planDateError.textContent = "";
-}
-
-function fillSettings() {
+function fillForms() {
   el.personOne.value = state.settings.personOne;
   el.personTwo.value = state.settings.personTwo;
   el.relationshipDate.value = state.settings.relationshipDate;
+  el.memoryDate.value = today();
 }
 
-function exportJson() {
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+function fillStaticOptions() {
+  el.annType.innerHTML = ANN_TYPES.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join("");
+  el.planType.innerHTML = PLAN_TYPES.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join("");
+  el.memoryTag.innerHTML = MEMORY_TAGS.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join("");
+}
+
+function refreshFilterOptions() {
+  const tab = state.uiState.listTab;
+  const typeList = tab === "anniversary" ? ANN_TYPES : tab === "plan" ? PLAN_TYPES : MEMORY_TAGS;
+  el.typeFilter.innerHTML = `<option value="all">すべて</option>${typeList.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join("")}`;
+  el.tagFilter.innerHTML = `<option value="all">タグすべて</option>${MEMORY_TAGS.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join("")}`;
+  el.tagFilter.disabled = tab !== "memory";
+  el.memoryAnniversary.innerHTML = `<option value="">未選択</option>${state.anniversaries.map((a) => `<option value="${a.id}">${esc(a.title)}</option>`).join("")}`;
+}
+
+function buildStatusCopy(rel) {
+  if (!rel.days) return "付き合った日を設定すると、今日どんな日かすぐ分かります。";
+  if (rel.yearly === 0 || rel.monthly === 0) return "今日は記念日当日です。少し特別な過ごし方にしてみましょう。";
+  if (rel.monthly <= 3) return `今日は月記念日の${rel.monthly}日前です。軽く予定を確認しておくと安心です。`;
+  return "何もない日も、ふたりにとっては積み重ねの日です。";
+}
+
+function pickTodayMessage(rel) {
+  const upcomingPlan = getNearestUpcoming(state.plans);
+  const pool = [];
+  if (rel.monthly != null && rel.monthly <= 2) pool.push("もうすぐ特別な日です。予定を確認しておきましょう。");
+  if (rel.monthly === 0 || rel.yearly === 0) pool.push("今日は大切な日です。少し特別に過ごしてみましょう。");
+  if (upcomingPlan && dayDiff(today(), upcomingPlan.date) <= 2) pool.push("近いうちに予定があります。準備を見直しておくと安心です。");
+  pool.push("何もない日も、ふたりにとっては積み重ねの日です。", "短いメッセージ1つでも、ちゃんと気持ちは届きます。", "今日の終わりに、よかったことを1行だけ残してみましょう。");
+  const seed = Number(today().replace(/-/g, "")) + state.memories.length;
+  return pool[seed % pool.length];
+}
+
+function buildRecommendations() {
+  const items = [];
+  if (!state.plans.length) items.push({ text: "次の予定を決める", jump: "add" });
+  if (!state.memories.length) items.push({ text: "思い出を1行だけ残す", jump: "add" });
+  if (state.memories.length > 0) items.push({ text: "写真やメモを見返す", jump: "reflection" });
+  items.push({ text: "短いメッセージを送る", jump: "home" });
+  return items.slice(0, 3);
+}
+
+function relationshipSummary(dateStr) {
+  if (!validDate(dateStr)) return { days: null, monthly: null, yearly: null };
+  const days = Math.max(1, dayDiff(dateStr, today()) + 1);
+  return { days, monthly: daysUntilNextMonthly(dateStr), yearly: daysUntilNextYearly(dateStr) };
+}
+
+function daysUntilNextMonthly(startDate) {
+  const start = toDate(startDate);
+  const t = toDate(today());
+  const candidate = new Date(t.getFullYear(), t.getMonth(), start.getDate());
+  if (candidate < t) candidate.setMonth(candidate.getMonth() + 1);
+  return dayDiff(today(), toISO(candidate));
+}
+
+function daysUntilNextYearly(startDate) {
+  const s = toDate(startDate);
+  const t = toDate(today());
+  const candidate = new Date(t.getFullYear(), s.getMonth(), s.getDate());
+  if (candidate < t) candidate.setFullYear(candidate.getFullYear() + 1);
+  return dayDiff(today(), toISO(candidate));
+}
+
+function getNearestUpcoming(list) {
+  return [...list].filter((i) => dayDiff(today(), i.date) >= 0).sort((a, b) => dayDiff(today(), a.date) - dayDiff(today(), b.date))[0] || null;
+}
+
+function findAnniversary(id) {
+  return state.anniversaries.find((a) => a.id === id);
+}
+
+function emptyMessage(tab) {
+  if (tab === "anniversary") return "まだ記念日がありません。まずは付き合った日や初デートを登録しましょう。";
+  if (tab === "plan") return "予定がありません。次に会う日や食事予定を入れておくと便利です。";
+  return "思い出メモがありません。一言だけでも残しておくと後で見返せます。";
+}
+
+function exportAll() {
+  const bundle = {
+    schemaVersion: 1,
+    exportedAt: new Date().toISOString(),
+    settings: state.settings,
+    anniversaries: state.anniversaries,
+    plans: state.plans,
+    memories: state.memories,
+    uiState: state.uiState
+  };
+  const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `anniversary-backup-${todayStr()}.json`;
+  a.download = `futari-backup-${today()}.json`;
   a.click();
   URL.revokeObjectURL(url);
-  el.backupMessage.textContent = "JSONを書き出しました。";
+  el.backupMessage.textContent = "バックアップを書き出しました。";
 }
 
-async function importJson(event) {
+async function importAll(event) {
   const file = event.target.files?.[0];
   if (!file) return;
-
   try {
-    const text = await file.text();
-    const data = JSON.parse(text);
-    if (!confirm("復元すると現在データを上書きします。続行しますか？")) return;
-
-    const normalized = normalizeState(data);
-    if (!normalized) {
-      el.backupMessage.textContent = "データ形式が不正です。";
-      return;
-    }
-
-    state = normalized;
-    persist();
-    fillSettings();
+    const raw = JSON.parse(await file.text());
+    if (!isBackupSchema(raw)) throw new Error("schema");
+    if (!confirm("復元すると現在のデータを上書きします。続行しますか？")) return;
+    state.settings = normalizeSettings(raw.settings);
+    state.anniversaries = normalizeCollection(raw.anniversaries, "anniversary");
+    state.plans = normalizeCollection(raw.plans, "plan");
+    state.memories = normalizeCollection(raw.memories, "memory");
+    state.uiState = normalizeUI(raw.uiState);
+    persistAll();
+    fillForms();
     renderAll();
-    el.backupMessage.textContent = "復元が完了しました。";
-    toast("復元しました");
-  } catch (_e) {
-    el.backupMessage.textContent = "JSONの読み込みに失敗しました。";
+    el.backupMessage.textContent = "復元に成功しました。";
+    toast("復元が完了しました");
+  } catch (_err) {
+    el.backupMessage.textContent = "JSONの形式が正しくありません。";
   } finally {
     el.importInput.value = "";
   }
 }
 
-function buildTypeFilterOptions() {
-  const list = state.uiState.listTab === "anniversary" ? ANN_TYPES : PLAN_TYPES;
-  return ['<option value="all">すべて</option>', ...list.map((x) => `<option value="${esc(x)}">${esc(x)}</option>`)].join("");
+function loadSample() {
+  const todayDate = today();
+  state.settings = { personOne: "りな", personTwo: "こうた", relationshipDate: shiftDate(todayDate, -180), notify: { enabled: false } };
+  state.anniversaries = [withAudit({ id: uid("ann"), title: "初デート", date: shiftDate(todayDate, -170), type: "初デート", memo: "駅前のカフェ" })];
+  state.plans = [withAudit({ id: uid("plan"), title: "記念日ディナー", date: shiftDate(todayDate, 5), type: "ごはん", place: "渋谷", memo: "予約する" })];
+  state.memories = [withAudit({ id: uid("mem"), body: "帰り道の会話がすごくよかった", title: "帰り道の会話", date: shiftDate(todayDate, -2), tag: "会話", relatedAnniversaryId: "", favorite: true })];
+  persistAll();
+  fillForms();
+  renderAll();
+  toast("サンプルデータを読み込みました");
 }
 
-function getNextEvent() {
-  const all = [
-    ...state.anniversaries.map((i) => ({ ...i, kind: "anniversary" })),
-    ...state.plans.map((i) => ({ ...i, kind: "plan" }))
-  ]
-    .filter((i) => dayDiff(todayStr(), i.date) >= 0)
-    .sort((a, b) => dayDiff(todayStr(), a.date) - dayDiff(todayStr(), b.date));
-  return all[0] || null;
+function isBackupSchema(data) {
+  return data && typeof data === "object" && Array.isArray(data.anniversaries) && Array.isArray(data.plans) && Array.isArray(data.memories) && typeof data.settings === "object";
 }
 
-function relationshipSummary(startDate) {
-  const days = Math.max(1, dayDiff(startDate, todayStr()) + 1);
+function normalizeAll() {
+  state.settings = normalizeSettings(state.settings);
+  state.anniversaries = normalizeCollection(state.anniversaries, "anniversary");
+  state.plans = normalizeCollection(state.plans, "plan");
+  state.memories = normalizeCollection(state.memories, "memory");
+  state.uiState = normalizeUI(state.uiState);
+}
+
+function normalizeSettings(src) {
   return {
-    days,
-    monthly: nextMonthly(startDate),
-    yearly: nextYearly(startDate)
+    personOne: clean(src?.personOne, 20),
+    personTwo: clean(src?.personTwo, 20),
+    relationshipDate: validDate(src?.relationshipDate) ? src.relationshipDate : "",
+    notify: { enabled: Boolean(src?.notify?.enabled) }
   };
 }
 
-function nextMonthly(startDate) {
-  const start = toDate(startDate);
-  const t = toDate(todayStr());
-  const cand = new Date(t.getFullYear(), t.getMonth(), start.getDate());
-  if (cand < t) cand.setMonth(cand.getMonth() + 1);
-  return dayDiff(todayStr(), iso(cand));
-}
-
-function nextYearly(startDate) {
-  const s = toDate(startDate);
-  const t = toDate(todayStr());
-  const cand = new Date(t.getFullYear(), s.getMonth(), s.getDate());
-  if (cand < t) cand.setFullYear(cand.getFullYear() + 1);
-  return dayDiff(todayStr(), iso(cand));
-}
-
-function askConfirm(text, action) {
-  pendingAction = action;
-  el.confirmText.textContent = text;
-  el.confirmDialog.showModal();
-}
-
-function runPendingAction() {
-  if (pendingAction) pendingAction();
-  pendingAction = null;
-  el.confirmDialog.close();
-}
-
-function toast(msg) {
-  clearTimeout(toastTimer);
-  el.toast.textContent = msg;
-  el.toast.classList.add("show");
-  toastTimer = setTimeout(() => el.toast.classList.remove("show"), 1900);
-}
-
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return defaultState();
-    const parsed = JSON.parse(raw);
-    return normalizeState(parsed) || defaultState();
-  } catch (_e) {
-    return defaultState();
-  }
-}
-
-function normalizeState(src) {
-  if (!src || typeof src !== "object") return null;
-  const base = defaultState();
-  const safe = {
-    version: 3,
-    settings: {
-      personOne: clean(src.settings?.personOne || "", 20),
-      personTwo: clean(src.settings?.personTwo || "", 20),
-      relationshipDate: validDate(src.settings?.relationshipDate) ? src.settings.relationshipDate : ""
-    },
-    anniversaries: normalizeItems(src.anniversaries, "anniversary"),
-    plans: normalizeItems(src.plans, "plan"),
-    notes: normalizeNotes(src.notes),
-    uiState: {
-      screen: ["home", "list", "add", "settings"].includes(src.uiState?.screen) ? src.uiState.screen : base.uiState.screen,
-      listTab: ["anniversary", "plan"].includes(src.uiState?.listTab) ? src.uiState.listTab : base.uiState.listTab,
-      addTab: ["anniversary", "plan"].includes(src.uiState?.addTab) ? src.uiState.addTab : base.uiState.addTab,
-      guideClosed: Boolean(src.uiState?.guideClosed)
-    }
-  };
-
-  if (!safe.plans.length && Array.isArray(src.anniversaries) && src.version === 2) {
-    safe.anniversaries = normalizeItems(src.anniversaries, "anniversary");
-  }
-
-  return safe;
-}
-
-function normalizeItems(list, kind) {
+function normalizeCollection(list, kind) {
   if (!Array.isArray(list)) return [];
   return list
-    .map((x) => ({
-      id: typeof x.id === "string" ? x.id : uid(kind === "plan" ? "plan" : "ann"),
-      title: clean(x.title || "", 40),
-      date: validDate(x.date) ? x.date : "",
-      type: clean(x.type || x.category || "その他", 20),
-      memo: clean(x.memo || x.note || "", 220),
-      place: kind === "plan" ? clean(x.place || "", 40) : "",
-      ready: kind === "plan" ? Boolean(x.ready) : false,
-      createdAt: typeof x.createdAt === "string" ? x.createdAt : new Date().toISOString()
-    }))
-    .filter((x) => x.title && x.date);
+    .map((item) => {
+      const base = {
+        id: typeof item.id === "string" ? item.id : uid(kind.slice(0, 3)),
+        createdAt: validTimestamp(item.createdAt) ? item.createdAt : new Date().toISOString(),
+        updatedAt: validTimestamp(item.updatedAt) ? item.updatedAt : new Date().toISOString(),
+        date: validDate(item.date) ? item.date : today()
+      };
+      if (kind === "anniversary") return { ...base, title: clean(item.title, 40), type: clean(item.type, 20) || "その他", memo: clean(item.memo, 220), favorite: Boolean(item.favorite) };
+      if (kind === "plan") return { ...base, title: clean(item.title, 40), type: clean(item.type, 20) || "その他", place: clean(item.place, 40), memo: clean(item.memo, 220), favorite: Boolean(item.favorite) };
+      return { ...base, body: clean(item.body, 300), title: clean(item.title, 30), tag: clean(item.tag, 20) || "何気ない日", relatedAnniversaryId: clean(item.relatedAnniversaryId, 30), favorite: Boolean(item.favorite) };
+    })
+    .filter((item) => item.title || item.body);
 }
 
-function normalizeNotes(obj) {
-  if (!obj || typeof obj !== "object") return {};
-  const out = {};
-  Object.keys(obj).forEach((k) => {
-    if (!Array.isArray(obj[k])) return;
-    out[k] = obj[k]
-      .map((n) => ({
-        id: typeof n.id === "string" ? n.id : uid("note"),
-        body: clean(n.body || "", 120),
-        createdAt: typeof n.createdAt === "string" ? n.createdAt : new Date().toISOString()
-      }))
-      .filter((n) => n.body);
-  });
-  return out;
+function normalizeUI(src) {
+  return {
+    screen: ["home", "list", "reflection", "add"].includes(src?.screen) ? src.screen : "home",
+    listTab: ["anniversary", "plan", "memory"].includes(src?.listTab) ? src.listTab : "anniversary",
+    addMode: ["quick", "full"].includes(src?.addMode) ? src.addMode : "quick"
+  };
 }
 
-function persist() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+function persistAll() {
+  localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(state.settings));
+  localStorage.setItem(STORAGE_KEYS.anniversaries, JSON.stringify(state.anniversaries));
+  localStorage.setItem(STORAGE_KEYS.plans, JSON.stringify(state.plans));
+  localStorage.setItem(STORAGE_KEYS.memories, JSON.stringify(state.memories));
+  saveUI();
 }
 
-function clean(v, max) {
-  return String(v || "").trim().replace(/\s+/g, " ").slice(0, max);
+function saveUI() {
+  localStorage.setItem(STORAGE_KEYS.uiState, JSON.stringify(state.uiState));
 }
 
-function validDate(v) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(String(v || "")) && !Number.isNaN(new Date(`${v}T00:00:00`).getTime());
+function safeLoad(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    return parsed ?? fallback;
+  } catch (_err) {
+    return fallback;
+  }
 }
 
-function formatDate(v) {
-  return new Date(`${typeof v === "string" ? v : iso(v)}T00:00:00`).toLocaleDateString("ja-JP", {
-    year: "numeric",
-    month: "numeric",
-    day: "numeric"
-  });
+function askConfirm(text, callback) {
+  pendingAction = callback;
+  el.dialogText.textContent = text;
+  el.dialog.showModal();
 }
 
-function formatDateTime(v) {
-  const d = new Date(v);
-  return d.toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+function toast(message) {
+  clearTimeout(toastTimer);
+  el.toast.textContent = message;
+  el.toast.classList.add("show");
+  toastTimer = setTimeout(() => el.toast.classList.remove("show"), 1800);
 }
 
-function todayStr() {
-  return iso(new Date());
+function withAudit(item) {
+  const now = new Date().toISOString();
+  return { ...item, createdAt: now, updatedAt: now };
+}
+
+function today() {
+  return toISO(new Date());
 }
 
 function dayDiff(from, to) {
-  const a = toDate(from);
-  const b = toDate(to);
-  return Math.round((b - a) / 86400000);
+  return Math.round((toDate(to) - toDate(from)) / 86400000);
 }
 
-function toDate(s) {
-  return new Date(`${s}T00:00:00`);
+function shiftDate(dateStr, diff) {
+  const d = toDate(dateStr);
+  d.setDate(d.getDate() + diff);
+  return toISO(d);
 }
 
-function iso(date) {
+function validDate(v) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(v || "")) && !Number.isNaN(toDate(v).getTime());
+}
+
+function validTimestamp(v) {
+  return typeof v === "string" && !Number.isNaN(new Date(v).getTime());
+}
+
+function formatDate(v) {
+  return new Date(`${v}T00:00:00`).toLocaleDateString("ja-JP", { year: "numeric", month: "numeric", day: "numeric" });
+}
+
+function toDate(v) {
+  return new Date(`${v}T00:00:00`);
+}
+
+function toISO(date) {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 }
 
-function pickDailyMessage() {
-  const index = Number(todayStr().replace(/-/g, "")) % dailyMessages.length;
-  return dailyMessages[index];
-}
-
-function guessType(text, options) {
-  if (/旅行/.test(text)) return "旅行";
-  if (/プレゼント/.test(text)) return "プレゼント";
-  if (/食/.test(text) || /ディナー/.test(text)) return "食事";
-  if (/相談/.test(text)) return "相談";
-  if (/デート/.test(text)) return "デート";
-  return options[0];
-}
-
 function uid(prefix) {
-  return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
+  return `${prefix}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
-function esc(v) {
-  return String(v || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+function clean(value, max = 999) {
+  return String(value || "").trim().replace(/\s+/g, " ").slice(0, max);
+}
+
+function esc(text) {
+  return String(text || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }
