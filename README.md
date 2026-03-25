@@ -119,3 +119,8 @@ python3 -m http.server 8000
 - 写真添付
 - カレンダー表示
 - 統計表示（連続記録日数、タグ別件数など）
+
+
+## Webアプリ設定（manifest.json）
+- `manifest.json` を追加し、アプリ名・短縮名・開始URL・スコープ・表示モード・背景色・テーマ色を定義しました。
+- GitHub Pages の `/anniversary-counter-app/` 配下でホーム画面追加時の見え方を整えやすくしています。

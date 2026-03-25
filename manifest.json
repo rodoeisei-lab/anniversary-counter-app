@@ -1,0 +1,9 @@
+{
+  "name": "ふたりカウント（記念日カウントWebアプリ）",
+  "short_name": "ふたりカウント",
+  "start_url": "/anniversary-counter-app/",
+  "scope": "/anniversary-counter-app/",
+  "display": "standalone",
+  "background_color": "#fbf9fd",
+  "theme_color": "#786dcf"
+}
