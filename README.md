@@ -55,3 +55,8 @@ python3 -m http.server 8000
 1. GitHubへpush
 2. Settings > Pages > Deploy from a branch
 3. 対象ブランチ + `/ (root)` を指定
+
+## Codex向けカスタムスキル
+- `skills/anniversary-counter-improver/SKILL.md`
+  - このリポジトリの改善を高速に進めるための運用スキル
+  - フォーム拡張 / テーマ追加 / 共有導線 / Canvas画像生成の変更手順を定義
