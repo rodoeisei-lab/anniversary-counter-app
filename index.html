@@ -4,200 +4,86 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>ふたりカウント</title>
-    <meta
-      name="description"
-      content="記念日・予定・思い出メモをやさしく積み上げる、スマホ最優先の記念日カウントWebアプリ"
-    />
+    <meta name="description" content="記念日を共有・プレゼント・記録として使えるスマホ最優先アプリ" />
     <link rel="stylesheet" href="style.css" />
     <link rel="manifest" href="manifest.json" />
   </head>
   <body>
-    <div class="app-shell">
+    <div class="app">
       <header class="app-header card">
         <div>
-          <p class="eyebrow">Today for us</p>
+          <p class="eyebrow">Shareable Anniversary Counter</p>
           <h1>ふたりカウント</h1>
         </div>
-        <p id="today-date" class="today-date">--</p>
+        <button id="theme-toggle" class="icon-btn" type="button" aria-label="ダークモード切替">🌙</button>
       </header>
 
-      <main>
-        <section class="screen active" data-screen="home">
-          <article class="card hero">
-            <p class="eyebrow">今日の2人</p>
-            <p class="hero-days" id="days-together">--日</p>
-            <p class="hero-caption" id="status-copy">設定すると今日の状況が表示されます。</p>
-          </article>
+      <section class="card hero" id="hero-card">
+        <p class="eyebrow">今日のカウント</p>
+        <p id="days-together" class="hero-days">--日</p>
+        <p id="hero-caption" class="hero-caption">まずは記念日を登録してください。</p>
+        <div class="hero-actions">
+          <button id="share-main" class="btn" type="button">共有</button>
+          <button id="download-main" class="btn secondary" type="button">画像保存</button>
+          <button id="present-main" class="btn secondary" type="button">プレゼント表示</button>
+        </div>
+      </section>
 
-          <section class="card mini-grid" aria-label="カウント情報">
-            <article>
-              <p class="label">今月の月記念日</p>
-              <p class="value" id="monthly-left">あと--日</p>
-            </article>
-            <article>
-              <p class="label">次の年記念日</p>
-              <p class="value" id="yearly-left">あと--日</p>
-            </article>
-          </section>
+      <section class="card form-card">
+        <h2>記念日を追加 / 編集</h2>
+        <form id="anniversary-form" class="form-grid">
+          <input type="hidden" id="ann-id" />
+          <label>
+            タイトル
+            <input id="ann-title" maxlength="40" placeholder="例: 付き合って100日" required />
+          </label>
+          <label>
+            日付
+            <input id="ann-date" type="date" required />
+          </label>
+          <label>
+            特別メッセージ
+            <textarea id="ann-message" rows="2" maxlength="120" placeholder="いつもありがとう"></textarea>
+          </label>
+          <label>
+            テーマ
+            <select id="ann-theme">
+              <option value="simple">シンプル</option>
+              <option value="romantic">ロマンチック</option>
+              <option value="pop">ポップ</option>
+            </select>
+          </label>
+          <p id="form-error" class="error"></p>
+          <div class="form-actions">
+            <button class="btn" type="submit">保存</button>
+            <button id="cancel-edit" class="btn secondary" type="button">編集キャンセル</button>
+          </div>
+        </form>
+      </section>
 
-          <section class="card">
-            <p class="eyebrow">今日のひとこと</p>
-            <p id="today-message" class="soft-text">--</p>
-          </section>
-
-          <section class="card" id="today-actions"></section>
-          <section class="card" id="near-plan"></section>
-          <section class="card" id="recent-anniversary"></section>
-          <section class="card" id="home-memory"></section>
-          <section class="card empty hidden" id="home-empty"></section>
-        </section>
-
-        <section class="screen" data-screen="list">
-          <article class="card tabs">
-            <button class="tab active" data-list-tab="anniversary" type="button">記念日</button>
-            <button class="tab" data-list-tab="plan" type="button">予定</button>
-            <button class="tab" data-list-tab="memory" type="button">思い出メモ</button>
-          </article>
-
-          <article class="card filters">
-            <label class="field">
-              <span>検索</span>
-              <input id="search-input" type="search" placeholder="タイトル・本文・タグ" />
-            </label>
-            <div class="inline-fields">
-              <label class="field">
-                <span>並び替え</span>
-                <select id="sort-filter">
-                  <option value="near">近い順 / 新しい順</option>
-                  <option value="far">遠い順 / 古い順</option>
-                </select>
-              </label>
-              <label class="field">
-                <span>期間</span>
-                <select id="time-filter">
-                  <option value="all">すべて</option>
-                  <option value="future">未来</option>
-                  <option value="past">過去</option>
-                </select>
-              </label>
-              <label class="field">
-                <span>お気に入り</span>
-                <select id="favorite-filter">
-                  <option value="all">すべて</option>
-                  <option value="favorite">お気に入りのみ</option>
-                </select>
-              </label>
-            </div>
-            <div class="inline-fields">
-              <label class="field">
-                <span>種別</span>
-                <select id="type-filter"></select>
-              </label>
-              <label class="field">
-                <span>タグ</span>
-                <select id="tag-filter"></select>
-              </label>
-            </div>
-          </article>
-
-          <section class="list" id="list-container"></section>
-          <article class="card empty hidden" id="list-empty"></article>
-        </section>
-
-        <section class="screen" data-screen="reflection">
-          <article class="card">
-            <p class="eyebrow">ふりかえりサマリー</p>
-            <ul class="summary-list" id="reflection-summary"></ul>
-          </article>
-          <article class="card" id="favorite-memories"></article>
-          <article class="card" id="recent-memories"></article>
-          <article class="card" id="past-anniversaries"></article>
-          <article class="card" id="past-plans"></article>
-        </section>
-
-        <section class="screen" data-screen="add">
-          <article class="card tabs">
-            <button class="tab active" data-add-mode="quick" type="button">すぐ追加</button>
-            <button class="tab" data-add-mode="full" type="button">しっかり追加</button>
-          </article>
-
-          <article class="card" id="quick-add"></article>
-
-          <form id="anniversary-form" class="card form hidden">
-            <h2>記念日を追加</h2>
-            <input type="hidden" id="ann-id" />
-            <label class="field"><span>タイトル</span><input id="ann-title" maxlength="40" required /></label>
-            <p class="error" id="ann-title-error"></p>
-            <label class="field"><span>日付</span><input id="ann-date" type="date" required /></label>
-            <p class="error" id="ann-date-error"></p>
-            <label class="field"><span>種別</span><select id="ann-type"></select></label>
-            <label class="field"><span>メモ</span><textarea id="ann-memo" rows="3" maxlength="220"></textarea></label>
-            <div class="actions"><button class="btn" type="submit">保存</button></div>
-          </form>
-
-          <form id="plan-form" class="card form hidden">
-            <h2>予定を追加</h2>
-            <input type="hidden" id="plan-id" />
-            <label class="field"><span>タイトル</span><input id="plan-title" maxlength="40" required /></label>
-            <p class="error" id="plan-title-error"></p>
-            <label class="field"><span>日付</span><input id="plan-date" type="date" required /></label>
-            <p class="error" id="plan-date-error"></p>
-            <label class="field"><span>種別</span><select id="plan-type"></select></label>
-            <label class="field"><span>場所</span><input id="plan-place" maxlength="40" /></label>
-            <label class="field"><span>メモ</span><textarea id="plan-memo" rows="3" maxlength="220"></textarea></label>
-            <div class="actions"><button class="btn" type="submit">保存</button></div>
-          </form>
-
-          <form id="memory-form" class="card form hidden">
-            <h2>思い出メモを追加</h2>
-            <input type="hidden" id="memory-id" />
-            <label class="field"><span>本文</span><textarea id="memory-body" rows="3" maxlength="300" required></textarea></label>
-            <p class="error" id="memory-body-error"></p>
-            <div class="inline-fields">
-              <label class="field"><span>日付</span><input id="memory-date" type="date" /></label>
-              <label class="field"><span>タグ</span><select id="memory-tag"></select></label>
-            </div>
-            <label class="field"><span>関連する記念日（任意）</span><select id="memory-anniversary"></select></label>
-            <label class="checkbox"><input type="checkbox" id="memory-favorite" /> お気に入りにする</label>
-            <div class="actions"><button class="btn" type="submit">保存</button></div>
-          </form>
-
-          <form id="settings-form" class="card form">
-            <h2>基本設定</h2>
-            <label class="field"><span>1人目の名前</span><input id="person-one" maxlength="20" /></label>
-            <label class="field"><span>2人目の名前</span><input id="person-two" maxlength="20" /></label>
-            <label class="field"><span>付き合った日</span><input id="relationship-date" type="date" /></label>
-            <div class="actions"><button class="btn" type="submit">設定を保存</button></div>
-          </form>
-
-          <article class="card form">
-            <h2>バックアップ / 復元</h2>
-            <div class="actions">
-              <button id="export-btn" class="btn secondary" type="button">JSONを書き出す</button>
-              <label class="btn secondary file-btn">JSONを読み込む<input id="import-input" type="file" accept="application/json" hidden /></label>
-              <button id="sample-btn" class="btn secondary" type="button">サンプルデータ</button>
-            </div>
-            <p id="backup-message" class="hint"></p>
-          </article>
-        </section>
-      </main>
-
-      <nav class="bottom-nav" aria-label="メインナビゲーション">
-        <button class="nav-btn active" data-nav="home" type="button"><span>ホーム</span></button>
-        <button class="nav-btn" data-nav="list" type="button"><span>一覧</span></button>
-        <button class="nav-btn" data-nav="reflection" type="button"><span>振り返り</span></button>
-        <button class="nav-btn" data-nav="add" type="button"><span>追加</span></button>
-      </nav>
+      <section class="card list-card">
+        <div class="list-head">
+          <h2>記念日カード</h2>
+          <button id="sample-btn" class="btn secondary" type="button">サンプル再読込</button>
+        </div>
+        <div id="anniversary-list" class="anniversary-list"></div>
+      </section>
     </div>
 
-    <div id="toast" class="toast" aria-live="polite"></div>
-    <dialog id="confirm-dialog">
-      <p id="confirm-text">実行しますか？</p>
-      <div class="actions">
-        <button id="confirm-ok" class="btn" type="button">実行</button>
-        <button id="confirm-cancel" class="btn secondary" type="button">キャンセル</button>
+    <button id="floating-share" class="floating-share" type="button">📤 共有</button>
+
+    <section id="present-mode" class="present-mode hidden" aria-label="カウントダウン専用表示">
+      <article id="present-card" class="present-card"></article>
+      <div class="present-actions">
+        <button id="present-share" class="btn" type="button">共有</button>
+        <button id="present-save" class="btn secondary" type="button">画像保存</button>
+        <button id="present-close" class="btn secondary" type="button">閉じる</button>
       </div>
-    </dialog>
+    </section>
+
+    <canvas id="share-canvas" width="1080" height="1350" hidden></canvas>
+    <div id="toast" class="toast"></div>
+
     <script src="script.js"></script>
   </body>
 </html>
