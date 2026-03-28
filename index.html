@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>ふたりカウント</title>
-    <meta name="description" content="記念日を共有・プレゼント・記録として使えるスマホ最優先アプリ" />
+    <meta name="description" content="毎日開きたくなる記念日カウントアプリ" />
     <link rel="stylesheet" href="style.css" />
     <link rel="manifest" href="manifest.json" />
   </head>
@@ -12,21 +12,51 @@
     <div class="app">
       <header class="app-header card">
         <div>
-          <p class="eyebrow">Shareable Anniversary Counter</p>
+          <p class="eyebrow">Daily Anniversary Companion</p>
           <h1>ふたりカウント</h1>
         </div>
         <button id="theme-toggle" class="icon-btn" type="button" aria-label="ダークモード切替">🌙</button>
       </header>
 
+      <section id="onboarding" class="card onboarding hidden" aria-live="polite">
+        <p class="eyebrow">はじめての方へ</p>
+        <h2>まず1つだけ記念日を登録すると、毎日チェックできる画面になります。</h2>
+        <ul>
+          <li>今日の変化（昨日との差）</li>
+          <li>次の節目と通知予定</li>
+          <li>進行度の可視化</li>
+        </ul>
+        <button id="onboarding-close" class="btn" type="button">OK、はじめる</button>
+      </section>
+
       <section class="card hero" id="hero-card">
-        <p class="eyebrow">今日のカウント</p>
-        <p id="days-together" class="hero-days">--日</p>
-        <p id="hero-caption" class="hero-caption">まずは記念日を登録してください。</p>
+        <p class="eyebrow">今日の状況</p>
+        <p id="today-value" class="hero-days">--</p>
+        <p id="today-caption" class="hero-caption">まずは記念日を登録してください。</p>
+        <div class="delta-wrap" id="delta-badge">昨日との差分: --</div>
         <div class="hero-actions">
           <button id="share-main" class="btn" type="button">共有</button>
           <button id="download-main" class="btn secondary" type="button">画像保存</button>
-          <button id="present-main" class="btn secondary" type="button">プレゼント表示</button>
+          <button id="present-main" class="btn secondary" type="button">全画面</button>
         </div>
+      </section>
+
+      <section class="card summary-card">
+        <div class="summary-head">
+          <h2>今日の記念日サマリー</h2>
+          <p id="checkin-stats" class="muted">連続チェック -- 日</p>
+        </div>
+        <div id="today-summary" class="summary-grid"></div>
+      </section>
+
+      <section class="card milestone-card">
+        <h2>次の節目まで</h2>
+        <div id="milestone-panel"></div>
+      </section>
+
+      <section class="card notify-card">
+        <h2>通知予定（疑似通知）</h2>
+        <div id="notify-list" class="notify-list"></div>
       </section>
 
       <section class="card form-card">
@@ -35,11 +65,12 @@
           <input type="hidden" id="ann-id" />
           <label>
             タイトル
-            <input id="ann-title" maxlength="40" placeholder="例: 付き合って100日" required />
+            <input id="ann-title" maxlength="40" placeholder="例: 付き合った日" required />
           </label>
           <label>
             日付
             <input id="ann-date" type="date" required />
+            <small class="hint">間違えやすい場合はカレンダーから選択してください</small>
           </label>
           <label>
             特別メッセージ
@@ -84,6 +115,6 @@
     <canvas id="share-canvas" width="1080" height="1350" hidden></canvas>
     <div id="toast" class="toast"></div>
 
-    <script src="script.js"></script>
+    <script type="module" src="./src/app.js"></script>
   </body>
 </html>
