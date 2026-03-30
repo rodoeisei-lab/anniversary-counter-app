@@ -1,4 +1,4 @@
-import { STORAGE_KEY, SAMPLE_ITEMS, THEMES, uid } from "./constants.js";
+import { STORAGE_KEYS, STORAGE_KEY, SAMPLE_ITEMS, THEMES, uid } from "./constants.js";
 import {
   daysFromToday,
   formatCountLabel,
@@ -44,6 +44,10 @@ const el = {
   presentShare: document.getElementById("present-share"),
   presentSave: document.getElementById("present-save"),
   presentClose: document.getElementById("present-close"),
+  backupExport: document.getElementById("backup-export"),
+  backupImport: document.getElementById("backup-import"),
+  backupFile: document.getElementById("backup-file"),
+  backupLast: document.getElementById("backup-last"),
   canvas: document.getElementById("share-canvas"),
   toast: document.getElementById("toast")
 };
@@ -101,11 +105,15 @@ function bindEvents() {
   el.presentShare.addEventListener("click", () => shareCard(getPresentingOrFeatured(), el.canvas, (text) => notify(el.toast, text)));
   el.presentSave.addEventListener("click", () => saveCardAsImage(getPresentingOrFeatured(), el.canvas, (text) => notify(el.toast, text)));
   el.presentClose.addEventListener("click", closePresent);
+  el.backupExport.addEventListener("click", exportBackup);
+  el.backupImport.addEventListener("click", () => el.backupFile.click());
+  el.backupFile.addEventListener("change", importBackup);
 }
 
 function render() {
   applyTheme();
   renderOnboarding();
+  renderBackupInfo();
 
   const featured = getFeatured();
   if (!featured) {
@@ -126,7 +134,6 @@ function render() {
   el.milestonePanel.innerHTML = buildMilestonePanel(featured, milestone);
   el.notifyList.innerHTML = buildNotifyList(featured);
   el.checkinStats.textContent = `連続チェック ${getOpenStreak()} 日`;
-
   renderCards();
 }
 
@@ -308,6 +315,80 @@ function trackOpenToday() {
   set.add(today);
   state.usage.openedDates = [...set].sort();
   persist();
+}
+
+function renderBackupInfo() {
+  const rawDate = localStorage.getItem(STORAGE_KEYS.LAST_BACKUP_AT);
+  if (!rawDate) {
+    el.backupLast.textContent = "最終バックアップ: まだありません";
+    return;
+  }
+  const date = new Date(rawDate);
+  if (Number.isNaN(date.getTime())) {
+    el.backupLast.textContent = "最終バックアップ: まだありません";
+    return;
+  }
+  const formatted = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+  el.backupLast.textContent = `最終バックアップ: ${formatted}`;
+}
+
+function exportBackup() {
+  try {
+    const appRaw = localStorage.getItem(STORAGE_KEY);
+    const appData = appRaw ? JSON.parse(appRaw) : { anniversaries: [] };
+    // NOTE: 既存のアプリ本体データ構造は appData としてそのまま保持します。
+    const payload = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      appData
+    };
+    const text = JSON.stringify(payload, null, 2);
+    const blob = new Blob([text], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const fileDate = toYmd(new Date()).replaceAll("-", "");
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `anniversary-backup-${fileDate}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    localStorage.setItem(STORAGE_KEYS.LAST_BACKUP_AT, new Date().toISOString());
+    renderBackupInfo();
+    notify(el.toast, "バックアップを保存しました");
+  } catch {
+    notify(el.toast, "バックアップの作成に失敗しました");
+  }
+}
+
+async function importBackup(event) {
+  const file = event.target.files?.[0];
+  event.target.value = "";
+  if (!file) {
+    notify(el.toast, "復元するファイルを選択してください");
+    return;
+  }
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    const appData = validateBackupData(data);
+    const ok = window.confirm("現在のデータを上書きして復元します。よろしいですか？");
+    if (!ok) return;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+    notify(el.toast, "復元が完了しました。画面を更新します。");
+    setTimeout(() => window.location.reload(), 350);
+  } catch (error) {
+    notify(el.toast, `復元に失敗しました: ${error.message || "JSON形式を確認してください"}`);
+  }
+}
+
+function validateBackupData(data) {
+  if (!data || typeof data !== "object") throw new Error("JSONがオブジェクトではありません");
+  const appData = data.appData;
+  if (!appData || typeof appData !== "object") throw new Error("バックアップの必須キー(appData)がありません");
+  if (!Array.isArray(appData.anniversaries)) throw new Error("anniversaries が見つかりません");
+  if (!("usage" in appData)) throw new Error("usage が見つかりません");
+  return appData;
 }
 
 function getOpenStreak() {
