@@ -1,4 +1,9 @@
-export const STORAGE_KEY = "anniv.share.v3";
+export const STORAGE_KEYS = {
+  APP_STATE: "anniv.share.v3",
+  LAST_BACKUP_AT: "anniv.share.lastBackupAt"
+};
+
+export const STORAGE_KEY = STORAGE_KEYS.APP_STATE;
 
 export const THEMES = {
   simple: {

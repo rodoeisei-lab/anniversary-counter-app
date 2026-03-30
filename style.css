@@ -297,3 +297,24 @@ textarea { resize: vertical; }
   .app { padding-bottom: 24px; }
   .floating-share { right: calc(50% - 340px); }
 }
+
+.backup-card {
+  display: grid;
+  gap: 10px;
+}
+
+.backup-note {
+  color: var(--muted);
+  font-size: .9rem;
+  line-height: 1.5;
+}
+
+.backup-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.backup-actions .btn {
+  min-height: 48px;
+}
