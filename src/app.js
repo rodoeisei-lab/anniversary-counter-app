@@ -49,11 +49,16 @@ const el = {
   backupFile: document.getElementById("backup-file"),
   backupLast: document.getElementById("backup-last"),
   canvas: document.getElementById("share-canvas"),
-  toast: document.getElementById("toast")
+  toast: document.getElementById("toast"),
+  sections: [...document.querySelectorAll(".app-section")],
+  navBtns: [...document.querySelectorAll(".nav-btn")],
+  addSection: document.getElementById("add-section"),
+  listSection: document.getElementById("list-section")
 };
 
 trackOpenToday();
 bindEvents();
+initSectionNav();
 render();
 
 function bindEvents() {
@@ -110,6 +115,46 @@ function bindEvents() {
   el.backupFile.addEventListener("change", importBackup);
 }
 
+function initSectionNav() {
+  el.navBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const target = document.getElementById(btn.dataset.target);
+      if (!target) return;
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+      flashSection(target);
+      updateActiveNav(target.id);
+    });
+  });
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      const current = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (!current) return;
+      updateActiveNav(current.target.id);
+    },
+    {
+      root: null,
+      threshold: [0.35, 0.6, 0.8],
+      rootMargin: "-15% 0px -45% 0px"
+    }
+  );
+
+  el.sections.forEach((section) => observer.observe(section));
+}
+
+function updateActiveNav(sectionId) {
+  el.navBtns.forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.target === sectionId);
+  });
+}
+
+function flashSection(section) {
+  section.classList.add("section-enter");
+  setTimeout(() => section.classList.remove("section-enter"), 260);
+}
+
 function render() {
   applyTheme();
   renderOnboarding();
@@ -119,6 +164,11 @@ function render() {
   if (!featured) {
     el.todayValue.textContent = "--";
     el.todayCaption.textContent = "記念日を追加すると、今日のサマリーが表示されます。";
+    el.summary.innerHTML = "";
+    el.milestonePanel.innerHTML = "";
+    el.notifyList.innerHTML = "";
+    el.checkinStats.textContent = "連続チェック 0 日";
+    el.list.innerHTML = "";
     return;
   }
 
@@ -244,6 +294,7 @@ function onSubmit(event) {
   persist();
   resetForm();
   render();
+  el.listSection.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function validate(item) {
@@ -260,7 +311,9 @@ function fillForm(item) {
   el.annMessage.value = item.message || "";
   el.annTheme.value = item.theme || "simple";
   el.formError.textContent = "";
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  const details = el.addSection.querySelector("details");
+  if (details) details.open = true;
+  el.addSection.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function resetForm() {
@@ -286,7 +339,7 @@ function openPresent(item) {
   const milestone = getMilestoneInfo(item);
   el.presentCard.className = `present-card ${theme.className}`;
   el.presentCard.innerHTML = `
-    <p class="eyebrow">Today\'s Anniversary</p>
+    <p class="eyebrow">Today's Anniversary</p>
     <p class="ann-title">${escapeHtml(item.title)}</p>
     <p class="ann-days">${formatCountLabel(daysFromToday(item.date))}</p>
     <p class="ann-date">${ymdToJp(item.date)}</p>
@@ -336,7 +389,6 @@ function exportBackup() {
   try {
     const appRaw = localStorage.getItem(STORAGE_KEY);
     const appData = appRaw ? JSON.parse(appRaw) : { anniversaries: [] };
-    // NOTE: 既存のアプリ本体データ構造は appData としてそのまま保持します。
     const payload = {
       version: 1,
       exportedAt: new Date().toISOString(),
