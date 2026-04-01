@@ -323,7 +323,7 @@ textarea { resize: vertical; }
 
 .floating-share {
   position: fixed;
-  bottom: calc(86px + env(safe-area-inset-bottom));
+  bottom: calc(150px + env(safe-area-inset-bottom));
   right: 14px;
   border: 0;
   border-radius: 999px;
@@ -334,6 +334,87 @@ textarea { resize: vertical; }
   font-weight: 800;
   box-shadow: var(--shadow);
   z-index: 20;
+}
+
+.quick-add-fab {
+  position: fixed;
+  right: 14px;
+  bottom: calc(86px + env(safe-area-inset-bottom));
+  width: 64px;
+  height: 64px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 2rem;
+  line-height: 1;
+  box-shadow: var(--shadow);
+  z-index: 22;
+}
+
+.quick-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+.quick-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 10, 20, 0.48);
+}
+
+.quick-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--surface);
+  border-radius: 24px 24px 0 0;
+  border: 1px solid var(--line);
+  border-bottom: 0;
+  padding: 14px 14px calc(14px + env(safe-area-inset-bottom));
+  transform: translateY(100%);
+  transition: transform .26s ease;
+}
+
+.quick-modal.open .quick-sheet {
+  transform: translateY(0);
+}
+
+.quick-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.quick-close {
+  min-width: 46px;
+  min-height: 46px;
+  font-size: 1.4rem;
+}
+
+.quick-form {
+  display: grid;
+  gap: 10px;
+}
+
+.quick-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.quick-actions .btn {
+  min-width: 120px;
+  min-height: 50px;
+}
+
+.quick-link {
+  color: var(--primary);
+  font-weight: 700;
+  text-decoration: none;
 }
 
 .present-mode {
@@ -394,6 +475,7 @@ textarea { resize: vertical; }
     border-radius: 16px 16px 0 0;
   }
   .floating-share { right: calc(50% - 340px); }
+  .quick-add-fab { right: calc(50% - 340px); }
 }
 
 .backup-card {

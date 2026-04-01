@@ -39,6 +39,15 @@ const el = {
   downloadMain: document.getElementById("download-main"),
   presentMain: document.getElementById("present-main"),
   floatingShare: document.getElementById("floating-share"),
+  quickAddFab: document.getElementById("quick-add-fab"),
+  quickModal: document.getElementById("quick-modal"),
+  quickOverlay: document.getElementById("quick-overlay"),
+  quickClose: document.getElementById("quick-close"),
+  quickForm: document.getElementById("quick-form"),
+  quickTitle: document.getElementById("quick-title"),
+  quickDate: document.getElementById("quick-date"),
+  quickError: document.getElementById("quick-error"),
+  quickToDetail: document.getElementById("quick-to-detail"),
   presentMode: document.getElementById("present-mode"),
   presentCard: document.getElementById("present-card"),
   presentShare: document.getElementById("present-share"),
@@ -58,12 +67,25 @@ const el = {
 
 trackOpenToday();
 bindEvents();
+resetForm();
 initSectionNav();
 render();
 
 function bindEvents() {
   el.form.addEventListener("submit", onSubmit);
+  el.quickForm.addEventListener("submit", onQuickSubmit);
   el.cancelEdit.addEventListener("click", resetForm);
+  el.quickAddFab.addEventListener("click", openQuickModal);
+  el.quickClose.addEventListener("click", closeQuickModal);
+  el.quickOverlay.addEventListener("click", closeQuickModal);
+  el.quickToDetail.addEventListener("click", () => {
+    closeQuickModal();
+    const details = el.addSection.querySelector("details");
+    if (details) details.open = true;
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && el.quickModal.classList.contains("open")) closeQuickModal();
+  });
   el.onboardingClose.addEventListener("click", () => {
     state.onboardingDone = true;
     persist();
@@ -266,34 +288,18 @@ function buildNotifyList(featured) {
 
 function onSubmit(event) {
   event.preventDefault();
+  const createdAt = new Date().toISOString();
   const payload = {
     id: el.annId.value || uid(),
     title: cleanText(el.annTitle.value, 40),
     date: el.annDate.value,
     message: cleanText(el.annMessage.value, 120),
     theme: el.annTheme.value,
-    createdAt: new Date().toISOString()
+    createdAt
   };
-
-  const err = validate(payload);
-  if (err) {
-    el.formError.textContent = err;
-    return;
-  }
-
-  const idx = state.anniversaries.findIndex((i) => i.id === payload.id);
-  if (idx >= 0) {
-    payload.createdAt = state.anniversaries[idx].createdAt;
-    state.anniversaries[idx] = payload;
-    notify(el.toast, "記念日を更新しました");
-  } else {
-    state.anniversaries.push(payload);
-    notify(el.toast, "記念日を追加しました");
-  }
-
-  persist();
+  const ok = saveAnniversary(payload, el.formError);
+  if (!ok) return;
   resetForm();
-  render();
   el.listSection.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -319,7 +325,61 @@ function fillForm(item) {
 function resetForm() {
   el.form.reset();
   el.annId.value = "";
+  el.annDate.value = toYmd(new Date());
   el.formError.textContent = "";
+}
+
+function onQuickSubmit(event) {
+  event.preventDefault();
+  const payload = {
+    id: uid(),
+    title: cleanText(el.quickTitle.value, 40),
+    date: el.quickDate.value,
+    message: "",
+    theme: "simple",
+    createdAt: new Date().toISOString()
+  };
+  const ok = saveAnniversary(payload, el.quickError);
+  if (!ok) return;
+  closeQuickModal();
+  el.listSection.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function saveAnniversary(payload, errorNode) {
+  const err = validate(payload);
+  if (err) {
+    errorNode.textContent = err;
+    return false;
+  }
+  errorNode.textContent = "";
+  const idx = state.anniversaries.findIndex((i) => i.id === payload.id);
+  if (idx >= 0) {
+    payload.createdAt = state.anniversaries[idx].createdAt;
+    state.anniversaries[idx] = payload;
+    notify(el.toast, "記念日を更新しました");
+  } else {
+    state.anniversaries.push(payload);
+    notify(el.toast, "記念日を追加しました");
+  }
+  persist();
+  render();
+  return true;
+}
+
+function openQuickModal() {
+  el.quickModal.classList.remove("hidden");
+  el.quickModal.classList.add("open");
+  el.quickModal.setAttribute("aria-hidden", "false");
+  el.quickForm.reset();
+  el.quickDate.value = toYmd(new Date());
+  el.quickError.textContent = "";
+  setTimeout(() => el.quickTitle.focus(), 30);
+}
+
+function closeQuickModal() {
+  el.quickModal.classList.remove("open");
+  el.quickModal.setAttribute("aria-hidden", "true");
+  setTimeout(() => el.quickModal.classList.add("hidden"), 220);
 }
 
 function applyTheme() {

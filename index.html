@@ -78,8 +78,8 @@
 
         <section id="add-section" class="app-section" data-nav="add" aria-label="追加セクション">
           <div class="section-heading">
-            <p class="eyebrow">追加</p>
-            <h2>記念日の登録と編集</h2>
+            <p class="eyebrow">詳細設定</p>
+            <h2>記念日の登録と編集（詳細）</h2>
           </div>
           <details class="section-collapse" open>
             <summary>追加フォームを開く</summary>
@@ -146,7 +146,33 @@
       <button class="nav-btn" type="button" data-target="settings-section">設定</button>
     </nav>
 
+    <button id="quick-add-fab" class="quick-add-fab" type="button" aria-label="記念日をクイック追加">＋</button>
     <button id="floating-share" class="floating-share" type="button">📤 共有</button>
+
+    <section id="quick-modal" class="quick-modal hidden" aria-label="クイック追加モーダル" aria-hidden="true">
+      <div id="quick-overlay" class="quick-overlay"></div>
+      <div class="quick-sheet" role="dialog" aria-modal="true" aria-labelledby="quick-modal-title">
+        <div class="quick-head">
+          <h2 id="quick-modal-title">クイック追加</h2>
+          <button id="quick-close" class="icon-btn quick-close" type="button" aria-label="閉じる">×</button>
+        </div>
+        <form id="quick-form" class="quick-form">
+          <label>
+            タイトル
+            <input id="quick-title" maxlength="40" placeholder="例: 誕生日、記念日、イベント" required />
+          </label>
+          <label>
+            日付
+            <input id="quick-date" type="date" required />
+          </label>
+          <p id="quick-error" class="error"></p>
+          <div class="quick-actions">
+            <button class="btn" type="submit">保存</button>
+            <a href="#add-section" id="quick-to-detail" class="quick-link">詳細へ</a>
+          </div>
+        </form>
+      </div>
+    </section>
 
     <section id="present-mode" class="present-mode hidden" aria-label="カウントダウン専用表示">
       <article id="present-card" class="present-card"></article>
