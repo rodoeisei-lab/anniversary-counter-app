@@ -25,7 +25,7 @@
 }
 
 * { box-sizing: border-box; }
-html, body { height: 100%; }
+html, body { height: 100%; scroll-behavior: smooth; }
 body {
   margin: 0;
   font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
@@ -39,9 +39,32 @@ ul { margin: 0; padding-left: 1.2rem; }
 .app {
   max-width: 700px;
   margin: 0 auto;
-  padding: 14px 14px 110px;
+  padding: 14px 14px calc(160px + env(safe-area-inset-bottom));
   display: grid;
   gap: 12px;
+}
+
+main {
+  display: grid;
+  gap: 22px;
+}
+
+.app-section {
+  display: grid;
+  gap: 12px;
+  scroll-margin-top: 12px;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity .28s ease, transform .28s ease;
+}
+
+.app-section.section-enter {
+  opacity: .92;
+  transform: translateY(6px);
+}
+
+.section-heading {
+  padding: 2px 4px;
 }
 
 .card {
@@ -53,9 +76,13 @@ ul { margin: 0; padding-left: 1.2rem; }
 }
 
 .app-header {
+  position: sticky;
+  top: 0;
+  z-index: 15;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  backdrop-filter: blur(8px);
 }
 
 .eyebrow { font-size: .72rem; color: var(--muted); letter-spacing: .08em; font-weight: 700; }
@@ -66,6 +93,31 @@ h2 { font-size: 1.05rem; }
 .onboarding h2 { margin-top: 8px; line-height: 1.5; font-size: 1rem; }
 .onboarding ul { margin-top: 10px; color: var(--muted); display: grid; gap: 6px; }
 .onboarding .btn { margin-top: 12px; }
+
+.section-collapse {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 8px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+}
+
+.section-collapse > summary {
+  list-style: none;
+  cursor: pointer;
+  font-size: .92rem;
+  font-weight: 700;
+  padding: 8px;
+  border-radius: 10px;
+}
+
+.section-collapse > summary::-webkit-details-marker {
+  display: none;
+}
+
+.section-collapse[open] > summary {
+  margin-bottom: 8px;
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+}
 
 .hero {
   min-height: 240px;
@@ -172,7 +224,7 @@ h2 { font-size: 1.05rem; }
 
 .btn, .icon-btn {
   border: 0;
-  min-height: 44px;
+  min-height: 46px;
   border-radius: 12px;
   padding: 0 14px;
   font-weight: 700;
@@ -199,6 +251,15 @@ textarea { resize: vertical; }
 
 .list-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
 .anniversary-list { margin-top: 12px; display: grid; gap: 10px; }
+
+.back-to-top {
+  display: inline-flex;
+  margin-top: 12px;
+  text-decoration: none;
+  color: var(--primary);
+  font-weight: 700;
+  font-size: .9rem;
+}
 
 .ann-card {
   border-radius: 20px;
@@ -230,9 +291,39 @@ textarea { resize: vertical; }
 .ann-actions .btn { background: rgba(255,255,255,.26); backdrop-filter: blur(2px); color: #fff; }
 .theme-pop .ann-actions .btn { color: #2e2500; background: rgba(255,255,255,.42); }
 
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 25;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.nav-btn {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  min-height: 48px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.nav-btn.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: transparent;
+}
+
 .floating-share {
   position: fixed;
-  bottom: max(14px, env(safe-area-inset-bottom));
+  bottom: calc(86px + env(safe-area-inset-bottom));
   right: 14px;
   border: 0;
   border-radius: 999px;
@@ -270,7 +361,7 @@ textarea { resize: vertical; }
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
-  bottom: 78px;
+  bottom: calc(132px + env(safe-area-inset-bottom));
   padding: 10px 14px;
   border-radius: 999px;
   background: #1f2747;
@@ -294,7 +385,14 @@ textarea { resize: vertical; }
 }
 
 @media (min-width: 760px) {
-  .app { padding-bottom: 24px; }
+  .app { padding-bottom: 120px; }
+  .bottom-nav {
+    max-width: 700px;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    border-radius: 16px 16px 0 0;
+  }
   .floating-share { right: calc(50% - 340px); }
 }
 
