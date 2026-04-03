@@ -23,6 +23,9 @@ const el = {
   notifyList: document.getElementById("notify-list"),
   checkinStats: document.getElementById("checkin-stats"),
   list: document.getElementById("anniversary-list"),
+  listState: document.getElementById("list-state"),
+  sortSelect: document.getElementById("sort-select"),
+  filterToggle: document.getElementById("filter-toggle"),
   form: document.getElementById("anniversary-form"),
   annId: document.getElementById("ann-id"),
   annTitle: document.getElementById("ann-title"),
@@ -65,11 +68,11 @@ const el = {
   listSection: document.getElementById("list-section")
 };
 
+initViewStateFromQuery();
 trackOpenToday();
 bindEvents();
 resetForm();
 initSectionNav();
-render();
 
 function bindEvents() {
   el.form.addEventListener("submit", onSubmit);
@@ -97,6 +100,20 @@ function bindEvents() {
     persist();
     render();
     notify(el.toast, "サンプル記念日を読み込みました");
+  });
+
+  el.sortSelect.addEventListener("change", () => {
+    state.view.sortType = el.sortSelect.value;
+    persist();
+    renderCards();
+  });
+
+  el.filterToggle.addEventListener("click", (event) => {
+    const btn = event.target.closest("button[data-filter]");
+    if (!btn) return;
+    state.view.filterType = btn.dataset.filter;
+    persist();
+    renderCards();
   });
 
   el.themeToggle.addEventListener("click", () => {
@@ -210,13 +227,25 @@ function render() {
 }
 
 function renderCards() {
-  el.list.innerHTML = state.anniversaries
+  syncOperationBar();
+  const today = new Date();
+  const list = getVisibleAnniversaries(today);
+  const currentLabel = `${FILTER_LABEL[state.view.filterType]}・${SORT_LABEL[state.view.sortType]}`;
+  el.listState.textContent = `表示状態: ${currentLabel}（${list.length}件）`;
+
+  if (!list.length) {
+    el.list.innerHTML = `<p class="muted">該当なし</p>`;
+    return;
+  }
+
+  el.list.innerHTML = list
     .map((item) => {
       const theme = THEMES[item.theme] || THEMES.simple;
       const diff = daysFromToday(item.date);
-      const milestone = getMilestoneInfo(item);
+      const milestone = getMilestoneInfo(item, today);
+      const urgencyClass = getUrgencyClass(diff);
       return `
-        <article class="ann-card ${theme.className}">
+        <article class="ann-card ${theme.className} ${urgencyClass}">
           <p class="ann-title">${escapeHtml(item.title)}</p>
           <p class="ann-days">${formatCountLabel(diff)}</p>
           <p class="ann-date">${ymdToJp(item.date)}</p>
@@ -422,6 +451,91 @@ function getFeatured() {
   return getNearestAnniversary(state.anniversaries);
 }
 
+const SORT_LABEL = {
+  nearest: "次に近い順",
+  dateAsc: "日付の古い順",
+  titleAsc: "タイトル昇順"
+};
+
+const FILTER_LABEL = {
+  all: "すべて",
+  past: "過去",
+  today: "今日",
+  future: "未来"
+};
+
+function initViewStateFromQuery() {
+  const params = new URLSearchParams(window.location.search);
+  const queryFilter = params.get("filter");
+  if (["all", "past", "today", "future"].includes(queryFilter)) {
+    state.view.filterType = queryFilter;
+  }
+}
+
+function syncOperationBar() {
+  el.sortSelect.value = state.view.sortType;
+  [...el.filterToggle.querySelectorAll(".filter-btn")].forEach((btn) => {
+    btn.classList.toggle("is-active", btn.dataset.filter === state.view.filterType);
+  });
+}
+
+function getVisibleAnniversaries(today = new Date()) {
+  const copied = [...state.anniversaries];
+  const filtered = copied.filter((item) => matchFilter(item, state.view.filterType, today));
+  const sorted = sortItems(filtered, state.view.sortType, today);
+  syncFilterQuery(state.view.filterType);
+  return sorted;
+}
+
+function matchFilter(item, filterType, today = new Date()) {
+  if (filterType === "all") return true;
+  const diff = daysFromToday(item.date, today);
+  if (filterType === "past") return diff < 0;
+  if (filterType === "today") return diff === 0;
+  if (filterType === "future") return diff > 0;
+  return true;
+}
+
+function sortItems(list, sortType, today = new Date()) {
+  if (sortType === "dateAsc") return sortByDateAsc(list);
+  if (sortType === "titleAsc") return sortByTitleAsc(list);
+  return sortByNearest(list, today);
+}
+
+function sortByNearest(list, today = new Date()) {
+  return [...list].sort((a, b) => {
+    const d0 = Math.abs(daysFromToday(a.date, today));
+    const d1 = Math.abs(daysFromToday(b.date, today));
+    if (d0 !== d1) return d0 - d1;
+    return a.date.localeCompare(b.date);
+  });
+}
+
+function sortByDateAsc(list) {
+  return [...list].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function sortByTitleAsc(list) {
+  return [...list].sort((a, b) => a.title.localeCompare(b.title, "ja"));
+}
+
+function getUrgencyClass(diff) {
+  const abs = Math.abs(diff);
+  if (abs <= 7) return "is-near";
+  if (abs <= 30) return "is-mid";
+  return "";
+}
+
+function syncFilterQuery(filterType) {
+  const url = new URL(window.location.href);
+  if (filterType === "all") {
+    url.searchParams.delete("filter");
+  } else {
+    url.searchParams.set("filter", filterType);
+  }
+  window.history.replaceState({}, "", url);
+}
+
 function trackOpenToday() {
   const today = toYmd(new Date());
   const set = new Set(state.usage.openedDates);
@@ -518,3 +632,5 @@ function getOpenStreak() {
 function persist() {
   persistState(STORAGE_KEY, state);
 }
+
+render();
