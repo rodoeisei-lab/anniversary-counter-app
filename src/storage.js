@@ -9,7 +9,8 @@ export function loadState(storageKey) {
       darkMode: !!raw.darkMode,
       presentingId: "",
       onboardingDone: !!raw.onboardingDone,
-      usage: normalizeUsage(raw.usage)
+      usage: normalizeUsage(raw.usage),
+      view: normalizeView(raw.view)
     };
   } catch {
     return {
@@ -17,7 +18,8 @@ export function loadState(storageKey) {
       darkMode: false,
       presentingId: "",
       onboardingDone: false,
-      usage: { openedDates: [] }
+      usage: { openedDates: [] },
+      view: { sortType: "nearest", filterType: "all" }
     };
   }
 }
@@ -27,7 +29,8 @@ export function persistState(storageKey, state) {
     anniversaries: state.anniversaries,
     darkMode: state.darkMode,
     onboardingDone: state.onboardingDone,
-    usage: state.usage
+    usage: state.usage,
+    view: state.view
   };
   localStorage.setItem(storageKey, JSON.stringify(payload));
 }
@@ -49,4 +52,10 @@ function normalizeItems(list) {
 function normalizeUsage(usage) {
   if (!usage || !Array.isArray(usage.openedDates)) return { openedDates: [] };
   return { openedDates: usage.openedDates.filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)) };
+}
+
+function normalizeView(view) {
+  const sortType = ["nearest", "dateAsc", "titleAsc"].includes(view?.sortType) ? view.sortType : "nearest";
+  const filterType = ["all", "past", "today", "future"].includes(view?.filterType) ? view.filterType : "all";
+  return { sortType, filterType };
 }

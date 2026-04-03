@@ -13,8 +13,8 @@ export function daysBetween(from, to) {
   return Math.round((d1 - d0) / DAY_MS);
 }
 
-export function daysFromToday(targetYmd) {
-  return daysBetween(new Date(), `${targetYmd}T00:00:00`);
+export function daysFromToday(targetYmd, baseDate = new Date()) {
+  return daysBetween(baseDate, `${targetYmd}T00:00:00`);
 }
 
 export function elapsedDaysFrom(targetYmd, baseDate = new Date()) {

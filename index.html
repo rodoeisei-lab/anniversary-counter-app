@@ -71,6 +71,23 @@
               <h2>記念日カード</h2>
               <button id="sample-btn" class="btn secondary" type="button">サンプル再読込</button>
             </div>
+            <div class="operation-bar" aria-label="一覧の操作バー">
+              <label class="sort-box">
+                並び替え
+                <select id="sort-select">
+                  <option value="nearest">次に近い順</option>
+                  <option value="dateAsc">日付の古い順</option>
+                  <option value="titleAsc">タイトル昇順</option>
+                </select>
+              </label>
+              <div id="filter-toggle" class="filter-toggle" role="tablist" aria-label="日付フィルタ">
+                <button type="button" class="filter-btn is-active" data-filter="all">すべて</button>
+                <button type="button" class="filter-btn" data-filter="past">過去</button>
+                <button type="button" class="filter-btn" data-filter="today">今日</button>
+                <button type="button" class="filter-btn" data-filter="future">未来</button>
+              </div>
+            </div>
+            <p id="list-state" class="list-state">表示状態: --</p>
             <div id="anniversary-list" class="anniversary-list"></div>
             <a href="#list-section" class="back-to-top">↑ 一覧の先頭へ戻る</a>
           </section>
