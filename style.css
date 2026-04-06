@@ -290,7 +290,47 @@ textarea { resize: vertical; }
   font-size: .84rem;
   font-weight: 700;
 }
+.render-mode-toggle {
+  margin-top: 10px;
+  display: inline-flex;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px;
+  max-width: 100%;
+  overflow-x: auto;
+}
+.mode-btn {
+  border: 0;
+  border-radius: 999px;
+  min-height: 34px;
+  padding: 0 12px;
+  color: var(--muted);
+  background: transparent;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.mode-btn.is-active {
+  background: color-mix(in srgb, var(--primary) 15%, var(--surface));
+  color: var(--text);
+}
 .anniversary-list { margin-top: 12px; display: grid; gap: 10px; }
+.list-loading, .list-complete {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: .86rem;
+  text-align: center;
+  font-weight: 700;
+}
+.list-more-btn {
+  margin-top: 10px;
+  width: 100%;
+}
+.list-sentinel {
+  width: 100%;
+  height: 1px;
+  margin-top: 2px;
+}
 
 .back-to-top {
   display: inline-flex;

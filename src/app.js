@@ -13,6 +13,10 @@ import { loadState, persistState } from "./storage.js";
 import { cleanText, escapeHtml, notify } from "./utils.js";
 import { saveCardAsImage, shareCard } from "./share.js";
 
+const INITIAL_RENDER_COUNT = 20;
+const BATCH_RENDER_COUNT = 20;
+const SCROLL_FALLBACK_THRESHOLD = 260;
+
 const state = loadState(STORAGE_KEY);
 const el = {
   todayValue: document.getElementById("today-value"),
@@ -24,6 +28,11 @@ const el = {
   checkinStats: document.getElementById("checkin-stats"),
   list: document.getElementById("anniversary-list"),
   listState: document.getElementById("list-state"),
+  renderModeToggle: document.getElementById("render-mode-toggle"),
+  listLoading: document.getElementById("list-loading"),
+  listMoreBtn: document.getElementById("list-more-btn"),
+  listComplete: document.getElementById("list-complete"),
+  listSentinel: document.getElementById("list-sentinel"),
   sortSelect: document.getElementById("sort-select"),
   filterToggle: document.getElementById("filter-toggle"),
   form: document.getElementById("anniversary-form"),
@@ -68,11 +77,23 @@ const el = {
   listSection: document.getElementById("list-section")
 };
 
+const listRuntime = {
+  allItems: [],
+  currentIndex: 0,
+  chunkSize: BATCH_RENDER_COUNT,
+  isAppending: false,
+  hasMore: false,
+  renderMode: "infinite",
+  observer: null,
+  fallbackBound: false
+};
+
 initViewStateFromQuery();
 trackOpenToday();
 bindEvents();
 resetForm();
 initSectionNav();
+setupListRendering();
 
 function bindEvents() {
   el.form.addEventListener("submit", onSubmit);
@@ -115,6 +136,8 @@ function bindEvents() {
     persist();
     renderCards();
   });
+  el.renderModeToggle.addEventListener("click", onRenderModeClick);
+  el.listMoreBtn.addEventListener("click", () => appendNextChunk());
 
   el.themeToggle.addEventListener("click", () => {
     state.darkMode = !state.darkMode;
@@ -207,7 +230,7 @@ function render() {
     el.milestonePanel.innerHTML = "";
     el.notifyList.innerHTML = "";
     el.checkinStats.textContent = "連続チェック 0 日";
-    el.list.innerHTML = "";
+    resetListRendering();
     return;
   }
 
@@ -230,41 +253,188 @@ function renderCards() {
   syncOperationBar();
   const today = new Date();
   const list = getVisibleAnniversaries(today);
+  listRuntime.allItems = list;
+  listRuntime.currentIndex = 0;
+  listRuntime.hasMore = list.length > 0;
   const currentLabel = `${FILTER_LABEL[state.view.filterType]}・${SORT_LABEL[state.view.sortType]}`;
   el.listState.textContent = `表示状態: ${currentLabel}（${list.length}件）`;
 
+  el.list.textContent = "";
+  hideLoading();
+  el.listComplete.classList.add("hidden");
+
   if (!list.length) {
-    el.list.innerHTML = `<p class="muted">該当なし</p>`;
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = "該当なし";
+    el.list.appendChild(empty);
+    updateListFooter();
     return;
   }
 
-  el.list.innerHTML = list
-    .map((item) => {
-      const theme = THEMES[item.theme] || THEMES.simple;
-      const diff = daysFromToday(item.date);
-      const milestone = getMilestoneInfo(item, today);
-      const urgencyClass = getUrgencyClass(diff);
-      return `
-        <article class="ann-card ${theme.className} ${urgencyClass}">
-          <p class="ann-title">${escapeHtml(item.title)}</p>
-          <p class="ann-days">${formatCountLabel(diff)}</p>
-          <p class="ann-date">${ymdToJp(item.date)}</p>
-          <p class="ann-msg">${escapeHtml(item.message || "特別メッセージを追加できます")}</p>
-          <div class="mini-progress">
-            <div class="mini-progress-label">次の節目: ${milestone.next}日 (${ymdToJp(milestone.nextDate)})</div>
-            <div class="progress-track"><div class="progress-fill" style="width:${milestone.progressRate}%"></div></div>
-          </div>
-          <div class="ann-actions">
-            <button class="btn" data-action="share" data-id="${item.id}" type="button">共有</button>
-            <button class="btn" data-action="save" data-id="${item.id}" type="button">画像保存</button>
-            <button class="btn" data-action="present" data-id="${item.id}" type="button">全画面</button>
-            <button class="btn" data-action="edit" data-id="${item.id}" type="button">編集</button>
-            <button class="btn" data-action="delete" data-id="${item.id}" type="button">削除</button>
-          </div>
-        </article>
-      `;
-    })
-    .join("");
+  const initialCount = Math.min(INITIAL_RENDER_COUNT, list.length);
+  appendNextChunk(initialCount);
+  updateListFooter();
+}
+
+function setupListRendering() {
+  if ("IntersectionObserver" in window) {
+    listRuntime.observer = new IntersectionObserver(
+      (entries) => {
+        const hit = entries.some((entry) => entry.isIntersecting);
+        if (!hit || listRuntime.renderMode !== "infinite") return;
+        appendNextChunk();
+      },
+      { root: null, rootMargin: "0px 0px 260px 0px", threshold: 0.01 }
+    );
+    listRuntime.observer.observe(el.listSentinel);
+  } else {
+    window.addEventListener("scroll", onScrollFallback, { passive: true });
+    listRuntime.fallbackBound = true;
+  }
+  syncRenderModeButtons();
+}
+
+function resetListRendering() {
+  listRuntime.allItems = [];
+  listRuntime.currentIndex = 0;
+  listRuntime.hasMore = false;
+  listRuntime.isAppending = false;
+  el.list.textContent = "";
+  hideLoading();
+  updateListFooter();
+}
+
+function onRenderModeClick(event) {
+  const btn = event.target.closest("button[data-mode]");
+  if (!btn) return;
+  const mode = btn.dataset.mode;
+  if (!["infinite", "paging"].includes(mode)) return;
+  if (listRuntime.renderMode === mode) return;
+  listRuntime.renderMode = mode;
+  syncRenderModeButtons();
+  updateListFooter();
+  if (mode === "infinite") onScrollFallback();
+}
+
+function syncRenderModeButtons() {
+  [...el.renderModeToggle.querySelectorAll(".mode-btn")].forEach((btn) => {
+    btn.classList.toggle("is-active", btn.dataset.mode === listRuntime.renderMode);
+  });
+}
+
+function onScrollFallback() {
+  if (listRuntime.renderMode !== "infinite" || !listRuntime.hasMore || listRuntime.isAppending) return;
+  const remained = document.documentElement.scrollHeight - (window.scrollY + window.innerHeight);
+  if (remained <= SCROLL_FALLBACK_THRESHOLD) appendNextChunk();
+}
+
+function appendNextChunk(forcedCount) {
+  if (listRuntime.isAppending || !listRuntime.hasMore) return;
+  listRuntime.isAppending = true;
+  showLoading();
+
+  const amount = Number.isInteger(forcedCount) ? forcedCount : listRuntime.chunkSize;
+  const next = listRuntime.allItems.slice(listRuntime.currentIndex, listRuntime.currentIndex + amount);
+  if (!next.length) {
+    hideLoading();
+    listRuntime.hasMore = false;
+    listRuntime.isAppending = false;
+    updateListFooter();
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  const today = new Date();
+  next.forEach((item) => fragment.appendChild(buildAnniversaryCard(item, today)));
+  el.list.appendChild(fragment);
+
+  listRuntime.currentIndex += next.length;
+  listRuntime.hasMore = listRuntime.currentIndex < listRuntime.allItems.length;
+  listRuntime.isAppending = false;
+  hideLoading();
+  updateListFooter();
+}
+
+function buildAnniversaryCard(item, today = new Date()) {
+  const theme = THEMES[item.theme] || THEMES.simple;
+  const diff = daysFromToday(item.date, today);
+  const milestone = getMilestoneInfo(item, today);
+  const urgencyClass = getUrgencyClass(diff);
+  const card = document.createElement("article");
+  card.className = `ann-card ${theme.className} ${urgencyClass}`.trim();
+
+  const title = document.createElement("p");
+  title.className = "ann-title";
+  title.textContent = item.title;
+  card.appendChild(title);
+
+  const days = document.createElement("p");
+  days.className = "ann-days";
+  days.textContent = formatCountLabel(diff);
+  card.appendChild(days);
+
+  const date = document.createElement("p");
+  date.className = "ann-date";
+  date.textContent = ymdToJp(item.date);
+  card.appendChild(date);
+
+  const message = document.createElement("p");
+  message.className = "ann-msg";
+  message.textContent = item.message || "特別メッセージを追加できます";
+  card.appendChild(message);
+
+  const miniProgress = document.createElement("div");
+  miniProgress.className = "mini-progress";
+  const miniLabel = document.createElement("div");
+  miniLabel.className = "mini-progress-label";
+  miniLabel.textContent = `次の節目: ${milestone.next}日 (${ymdToJp(milestone.nextDate)})`;
+  miniProgress.appendChild(miniLabel);
+  const track = document.createElement("div");
+  track.className = "progress-track";
+  const fill = document.createElement("div");
+  fill.className = "progress-fill";
+  fill.style.width = `${milestone.progressRate}%`;
+  track.appendChild(fill);
+  miniProgress.appendChild(track);
+  card.appendChild(miniProgress);
+
+  const actions = document.createElement("div");
+  actions.className = "ann-actions";
+  actions.appendChild(buildActionButton("共有", "share", item.id));
+  actions.appendChild(buildActionButton("画像保存", "save", item.id));
+  actions.appendChild(buildActionButton("全画面", "present", item.id));
+  actions.appendChild(buildActionButton("編集", "edit", item.id));
+  actions.appendChild(buildActionButton("削除", "delete", item.id));
+  card.appendChild(actions);
+  return card;
+}
+
+function buildActionButton(label, action, id) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "btn";
+  btn.dataset.action = action;
+  btn.dataset.id = id;
+  btn.textContent = label;
+  return btn;
+}
+
+function showLoading() {
+  el.listLoading.classList.remove("hidden");
+}
+
+function hideLoading() {
+  el.listLoading.classList.add("hidden");
+}
+
+function updateListFooter() {
+  const hasItems = listRuntime.allItems.length > 0;
+  const completed = hasItems && !listRuntime.hasMore;
+  el.listComplete.classList.toggle("hidden", !completed);
+
+  const showMoreBtn = hasItems && listRuntime.renderMode === "paging" && listRuntime.hasMore;
+  el.listMoreBtn.classList.toggle("hidden", !showMoreBtn);
 }
 
 function buildSummary(featured, milestone) {
