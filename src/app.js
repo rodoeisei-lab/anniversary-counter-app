@@ -71,6 +71,7 @@ const el = {
   backupLast: document.getElementById("backup-last"),
   canvas: document.getElementById("share-canvas"),
   toast: document.getElementById("toast"),
+  srStatus: document.getElementById("sr-status"),
   sections: [...document.querySelectorAll(".app-section")],
   navBtns: [...document.querySelectorAll(".nav-btn")],
   addSection: document.getElementById("add-section"),
@@ -110,6 +111,7 @@ function bindEvents() {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && el.quickModal.classList.contains("open")) closeQuickModal();
   });
+  bindKeyboardShortcuts();
   el.onboardingClose.addEventListener("click", () => {
     state.onboardingDone = true;
     persist();
@@ -120,7 +122,7 @@ function bindEvents() {
     state.anniversaries = structuredClone(SAMPLE_ITEMS);
     persist();
     render();
-    notify(el.toast, "サンプル記念日を読み込みました");
+    announce("サンプル記念日を読み込みました");
   });
 
   el.sortSelect.addEventListener("change", () => {
@@ -140,9 +142,11 @@ function bindEvents() {
   el.listMoreBtn.addEventListener("click", () => appendNextChunk());
 
   el.themeToggle.addEventListener("click", () => {
-    state.darkMode = !state.darkMode;
+    state.themeMode = nextThemeMode(state.themeMode);
+    state.darkMode = state.themeMode === "dark";
     persist();
     applyTheme();
+    announce(`表示テーマを${THEME_MODE_LABEL[state.themeMode]}に切り替えました`);
   });
 
   el.list.addEventListener("click", (event) => {
@@ -158,19 +162,20 @@ function bindEvents() {
       state.anniversaries = state.anniversaries.filter((ann) => ann.id !== id);
       persist();
       render();
+      announce("記念日を削除しました");
       return;
     }
     if (btn.dataset.action === "present") return openPresent(item);
-    if (btn.dataset.action === "save") return saveCardAsImage(item, el.canvas, (text) => notify(el.toast, text));
-    if (btn.dataset.action === "share") return shareCard(item, el.canvas, (text) => notify(el.toast, text));
+    if (btn.dataset.action === "save") return saveCardAsImage(item, el.canvas, (text) => announce(text));
+    if (btn.dataset.action === "share") return shareCard(item, el.canvas, (text) => announce(text));
   });
 
-  el.shareMain.addEventListener("click", () => shareCard(getFeatured(), el.canvas, (text) => notify(el.toast, text)));
-  el.downloadMain.addEventListener("click", () => saveCardAsImage(getFeatured(), el.canvas, (text) => notify(el.toast, text)));
+  el.shareMain.addEventListener("click", () => shareCard(getFeatured(), el.canvas, (text) => announce(text)));
+  el.downloadMain.addEventListener("click", () => saveCardAsImage(getFeatured(), el.canvas, (text) => announce(text)));
   el.presentMain.addEventListener("click", () => openPresent(getFeatured()));
-  el.floatingShare.addEventListener("click", () => shareCard(getFeatured(), el.canvas, (text) => notify(el.toast, text)));
-  el.presentShare.addEventListener("click", () => shareCard(getPresentingOrFeatured(), el.canvas, (text) => notify(el.toast, text)));
-  el.presentSave.addEventListener("click", () => saveCardAsImage(getPresentingOrFeatured(), el.canvas, (text) => notify(el.toast, text)));
+  el.floatingShare.addEventListener("click", () => shareCard(getFeatured(), el.canvas, (text) => announce(text)));
+  el.presentShare.addEventListener("click", () => shareCard(getPresentingOrFeatured(), el.canvas, (text) => announce(text)));
+  el.presentSave.addEventListener("click", () => saveCardAsImage(getPresentingOrFeatured(), el.canvas, (text) => announce(text)));
   el.presentClose.addEventListener("click", closePresent);
   el.backupExport.addEventListener("click", exportBackup);
   el.backupImport.addEventListener("click", () => el.backupFile.click());
@@ -237,9 +242,13 @@ function render() {
   const diff = daysFromToday(featured.date);
   const milestone = getMilestoneInfo(featured);
 
-  el.todayValue.textContent = formatCountLabel(diff);
+  const countText = formatCountLabel(diff);
+  el.todayValue.textContent = countText;
+  el.todayValue.setAttribute("aria-label", `${featured.title}は${countText}`);
   el.todayCaption.textContent = `${featured.title}（${ymdToJp(featured.date)}）`;
-  el.deltaBadge.textContent = `今日の変化: ${getDailyDeltaLabel(featured)}`;
+  const deltaText = getDailyDeltaLabel(featured);
+  el.deltaBadge.textContent = `今日の変化: ${deltaText}`;
+  el.deltaBadge.setAttribute("aria-label", `昨日との差分は${deltaText}`);
   el.deltaBadge.classList.toggle("is-positive", true);
 
   el.summary.innerHTML = buildSummary(featured, milestone);
@@ -314,12 +323,14 @@ function onRenderModeClick(event) {
   listRuntime.renderMode = mode;
   syncRenderModeButtons();
   updateListFooter();
+  announce(`描画モードを${mode === "infinite" ? "自動読込" : "ページ送り"}に変更しました`);
   if (mode === "infinite") onScrollFallback();
 }
 
 function syncRenderModeButtons() {
   [...el.renderModeToggle.querySelectorAll(".mode-btn")].forEach((btn) => {
     btn.classList.toggle("is-active", btn.dataset.mode === listRuntime.renderMode);
+    btn.setAttribute("aria-pressed", String(btn.dataset.mode === listRuntime.renderMode));
   });
 }
 
@@ -363,6 +374,8 @@ function buildAnniversaryCard(item, today = new Date()) {
   const urgencyClass = getUrgencyClass(diff);
   const card = document.createElement("article");
   card.className = `ann-card ${theme.className} ${urgencyClass}`.trim();
+  card.setAttribute("role", "article");
+  card.setAttribute("aria-label", `${item.title}、${ymdToJp(item.date)}、${formatCountLabel(diff)}`);
 
   const title = document.createElement("p");
   title.className = "ann-title";
@@ -417,15 +430,20 @@ function buildActionButton(label, action, id) {
   btn.dataset.action = action;
   btn.dataset.id = id;
   btn.textContent = label;
+  btn.setAttribute("aria-label", `${label}：${id}`);
   return btn;
 }
 
 function showLoading() {
   el.listLoading.classList.remove("hidden");
+  el.listLoading.setAttribute("aria-busy", "true");
+  setBusy(el.listMoreBtn, true);
 }
 
 function hideLoading() {
   el.listLoading.classList.add("hidden");
+  el.listLoading.setAttribute("aria-busy", "false");
+  setBusy(el.listMoreBtn, false);
 }
 
 function updateListFooter() {
@@ -500,6 +518,7 @@ function onSubmit(event) {
   if (!ok) return;
   resetForm();
   el.listSection.scrollIntoView({ behavior: "smooth", block: "start" });
+  el.annTitle.focus();
 }
 
 function validate(item) {
@@ -519,6 +538,7 @@ function fillForm(item) {
   const details = el.addSection.querySelector("details");
   if (details) details.open = true;
   el.addSection.scrollIntoView({ behavior: "smooth", block: "start" });
+  setTimeout(() => el.annTitle.focus(), 60);
 }
 
 function resetForm() {
@@ -548,6 +568,7 @@ function saveAnniversary(payload, errorNode) {
   const err = validate(payload);
   if (err) {
     errorNode.textContent = err;
+    announce(err, "error");
     return false;
   }
   errorNode.textContent = "";
@@ -555,10 +576,10 @@ function saveAnniversary(payload, errorNode) {
   if (idx >= 0) {
     payload.createdAt = state.anniversaries[idx].createdAt;
     state.anniversaries[idx] = payload;
-    notify(el.toast, "記念日を更新しました");
+    announce("記念日を更新しました");
   } else {
     state.anniversaries.push(payload);
-    notify(el.toast, "記念日を追加しました");
+    announce("記念日を追加しました");
   }
   persist();
   render();
@@ -579,11 +600,16 @@ function closeQuickModal() {
   el.quickModal.classList.remove("open");
   el.quickModal.setAttribute("aria-hidden", "true");
   setTimeout(() => el.quickModal.classList.add("hidden"), 220);
+  el.quickAddFab.focus();
 }
 
 function applyTheme() {
-  document.documentElement.dataset.theme = state.darkMode ? "dark" : "light";
-  el.themeToggle.textContent = state.darkMode ? "☀️" : "🌙";
+  const mode = resolveThemeMode();
+  const currentTheme = getCurrentTheme(mode);
+  document.documentElement.dataset.theme = currentTheme;
+  el.themeToggle.textContent = currentTheme === "dark" ? "☀️" : "🌙";
+  el.themeToggle.setAttribute("aria-pressed", String(currentTheme === "dark"));
+  el.themeToggle.setAttribute("aria-label", `表示テーマ切替（現在: ${THEME_MODE_LABEL[mode]}）`);
 }
 
 function renderOnboarding() {
@@ -592,7 +618,7 @@ function renderOnboarding() {
 }
 
 function openPresent(item) {
-  if (!item) return notify(el.toast, "共有する記念日がありません");
+  if (!item) return announce("共有する記念日がありません", "error");
   state.presentingId = item.id;
   const theme = THEMES[item.theme] || THEMES.simple;
   const milestone = getMilestoneInfo(item);
@@ -611,6 +637,30 @@ function openPresent(item) {
 function closePresent() {
   state.presentingId = "";
   el.presentMode.classList.add("hidden");
+}
+
+const THEME_MODE_LABEL = {
+  auto: "自動",
+  light: "ライト",
+  dark: "ダーク"
+};
+
+function nextThemeMode(mode) {
+  if (mode === "auto") return "light";
+  if (mode === "light") return "dark";
+  return "auto";
+}
+
+function resolveThemeMode() {
+  if (!state.themeMode) {
+    state.themeMode = state.darkMode ? "dark" : "auto";
+  }
+  return state.themeMode;
+}
+
+function getCurrentTheme(mode) {
+  if (mode === "light" || mode === "dark") return mode;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 function getPresentingOrFeatured() {
@@ -645,7 +695,9 @@ function initViewStateFromQuery() {
 function syncOperationBar() {
   el.sortSelect.value = state.view.sortType;
   [...el.filterToggle.querySelectorAll(".filter-btn")].forEach((btn) => {
-    btn.classList.toggle("is-active", btn.dataset.filter === state.view.filterType);
+    const active = btn.dataset.filter === state.view.filterType;
+    btn.classList.toggle("is-active", active);
+    btn.setAttribute("aria-selected", String(active));
   });
 }
 
@@ -751,9 +803,9 @@ function exportBackup() {
     URL.revokeObjectURL(url);
     localStorage.setItem(STORAGE_KEYS.LAST_BACKUP_AT, new Date().toISOString());
     renderBackupInfo();
-    notify(el.toast, "バックアップを保存しました");
+    announce("バックアップを保存しました");
   } catch {
-    notify(el.toast, "バックアップの作成に失敗しました");
+    announce("バックアップの作成に失敗しました", "error");
   }
 }
 
@@ -761,7 +813,7 @@ async function importBackup(event) {
   const file = event.target.files?.[0];
   event.target.value = "";
   if (!file) {
-    notify(el.toast, "復元するファイルを選択してください");
+    announce("復元するファイルを選択してください", "error");
     return;
   }
   try {
@@ -771,10 +823,10 @@ async function importBackup(event) {
     const ok = window.confirm("現在のデータを上書きして復元します。よろしいですか？");
     if (!ok) return;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
-    notify(el.toast, "復元が完了しました。画面を更新します。");
+    announce("復元が完了しました。画面を更新します。");
     setTimeout(() => window.location.reload(), 350);
   } catch (error) {
-    notify(el.toast, `復元に失敗しました: ${error.message || "JSON形式を確認してください"}`);
+    announce(`復元に失敗しました: ${error.message || "JSON形式を確認してください"}`, "error");
   }
 }
 
@@ -801,6 +853,31 @@ function getOpenStreak() {
 
 function persist() {
   persistState(STORAGE_KEY, state);
+}
+
+function bindKeyboardShortcuts() {
+  const submitOnEnter = [el.annTitle, el.annDate, el.quickTitle, el.quickDate];
+  submitOnEnter.forEach((node) => {
+    node.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      const form = node.closest("form");
+      if (!form) return;
+      event.preventDefault();
+      form.requestSubmit();
+    });
+  });
+}
+
+function announce(text, type = "success") {
+  notify(el.toast, text, type);
+  if (el.srStatus) el.srStatus.textContent = text;
+}
+
+function setBusy(node, isBusy) {
+  if (!node) return;
+  node.disabled = isBusy;
+  node.classList.toggle("is-loading", isBusy);
+  node.setAttribute("aria-busy", String(isBusy));
 }
 
 render();
