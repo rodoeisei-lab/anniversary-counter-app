@@ -9,13 +9,14 @@
     <link rel="manifest" href="manifest.json" />
   </head>
   <body>
+    <a href="#list-section" class="skip-link">本文へスキップ</a>
     <div class="app">
       <header class="app-header card">
         <div>
           <p class="eyebrow">Daily Anniversary Companion</p>
           <h1>ふたりカウント</h1>
         </div>
-        <button id="theme-toggle" class="icon-btn" type="button" aria-label="ダークモード切替">🌙</button>
+        <button id="theme-toggle" class="icon-btn" type="button" aria-label="表示テーマ切替" aria-pressed="false">🌙</button>
       </header>
 
       <section id="onboarding" class="card onboarding hidden" aria-live="polite">
@@ -36,15 +37,15 @@
             <h2>今日の状況と記念日一覧</h2>
           </div>
 
-          <section class="card hero" id="hero-card">
+          <section class="card hero" id="hero-card" aria-labelledby="today-caption">
             <p class="eyebrow">今日の状況</p>
-            <p id="today-value" class="hero-days">--</p>
-            <p id="today-caption" class="hero-caption">まずは記念日を登録してください。</p>
-            <div class="delta-wrap" id="delta-badge">昨日との差分: --</div>
+            <p id="today-value" class="hero-days" role="status" aria-live="polite" aria-label="本日の経過日数">--</p>
+            <p id="today-caption" class="hero-caption" role="status" aria-live="polite">まずは記念日を登録してください。</p>
+            <div class="delta-wrap" id="delta-badge" role="status" aria-live="polite">昨日との差分: --</div>
             <div class="hero-actions">
-              <button id="share-main" class="btn" type="button">共有</button>
-              <button id="download-main" class="btn secondary" type="button">画像保存</button>
-              <button id="present-main" class="btn secondary" type="button">全画面</button>
+              <button id="share-main" class="btn" type="button" aria-label="表示中の記念日を共有する">共有</button>
+              <button id="download-main" class="btn secondary" type="button" aria-label="表示中の記念日を画像として保存する">画像保存</button>
+              <button id="present-main" class="btn secondary" type="button" aria-label="表示中の記念日を全画面表示する">全画面</button>
             </div>
           </section>
 
@@ -74,23 +75,23 @@
             <div class="operation-bar" aria-label="一覧の操作バー">
               <label class="sort-box">
                 並び替え
-                <select id="sort-select">
+                <select id="sort-select" aria-label="記念日一覧の並び替え">
                   <option value="nearest">次に近い順</option>
                   <option value="dateAsc">日付の古い順</option>
                   <option value="titleAsc">タイトル昇順</option>
                 </select>
               </label>
               <div id="filter-toggle" class="filter-toggle" role="tablist" aria-label="日付フィルタ">
-                <button type="button" class="filter-btn is-active" data-filter="all">すべて</button>
-                <button type="button" class="filter-btn" data-filter="past">過去</button>
-                <button type="button" class="filter-btn" data-filter="today">今日</button>
-                <button type="button" class="filter-btn" data-filter="future">未来</button>
+                <button type="button" class="filter-btn is-active" data-filter="all" role="tab" aria-selected="true">すべて</button>
+                <button type="button" class="filter-btn" data-filter="past" role="tab" aria-selected="false">過去</button>
+                <button type="button" class="filter-btn" data-filter="today" role="tab" aria-selected="false">今日</button>
+                <button type="button" class="filter-btn" data-filter="future" role="tab" aria-selected="false">未来</button>
               </div>
             </div>
-            <p id="list-state" class="list-state">表示状態: --</p>
+            <p id="list-state" class="list-state" role="status" aria-live="polite">表示状態: --</p>
             <div id="render-mode-toggle" class="render-mode-toggle" role="group" aria-label="描画モード切替">
-              <button type="button" class="mode-btn is-active" data-mode="infinite">自動読込</button>
-              <button type="button" class="mode-btn" data-mode="paging">ページ送り</button>
+              <button type="button" class="mode-btn is-active" data-mode="infinite" aria-pressed="true">自動読込</button>
+              <button type="button" class="mode-btn" data-mode="paging" aria-pressed="false">ページ送り</button>
             </div>
             <div id="anniversary-list" class="anniversary-list"></div>
             <div id="list-loading" class="list-loading hidden" aria-live="polite">読み込み中…</div>
@@ -110,30 +111,30 @@
             <summary>追加フォームを開く</summary>
             <section class="card form-card">
               <h2>記念日を追加 / 編集</h2>
-              <form id="anniversary-form" class="form-grid">
+              <form id="anniversary-form" class="form-grid" aria-label="記念日の追加と編集フォーム">
                 <input type="hidden" id="ann-id" />
                 <label>
                   タイトル
-                  <input id="ann-title" maxlength="40" placeholder="例: 付き合った日" required />
+                  <input id="ann-title" maxlength="40" placeholder="例: 付き合った日" required role="textbox" aria-label="記念日のタイトル" />
                 </label>
                 <label>
                   日付
-                  <input id="ann-date" type="date" required />
+                  <input id="ann-date" type="date" required role="textbox" aria-label="記念日の日付" />
                   <small class="hint">間違えやすい場合はカレンダーから選択してください</small>
                 </label>
                 <label>
                   特別メッセージ
-                  <textarea id="ann-message" rows="2" maxlength="120" placeholder="いつもありがとう"></textarea>
+                  <textarea id="ann-message" rows="2" maxlength="120" placeholder="いつもありがとう" aria-label="特別メッセージ"></textarea>
                 </label>
                 <label>
                   テーマ
-                  <select id="ann-theme">
+                  <select id="ann-theme" aria-label="カードテーマ">
                     <option value="simple">シンプル</option>
                     <option value="romantic">ロマンチック</option>
                     <option value="pop">ポップ</option>
                   </select>
                 </label>
-                <p id="form-error" class="error"></p>
+                <p id="form-error" class="error" role="alert" aria-live="assertive"></p>
                 <div class="form-actions">
                   <button class="btn" type="submit">保存</button>
                   <button id="cancel-edit" class="btn secondary" type="button">編集キャンセル</button>
@@ -158,7 +159,7 @@
                 <button id="backup-export" class="btn" type="button">バックアップ</button>
                 <button id="backup-import" class="btn secondary" type="button">復元</button>
               </div>
-              <input id="backup-file" type="file" accept="application/json,.json" class="hidden" />
+              <input id="backup-file" type="file" accept="application/json,.json" class="hidden" aria-label="バックアップファイルを選択" />
             </section>
           </details>
         </section>
@@ -166,13 +167,13 @@
     </div>
 
     <nav class="bottom-nav" aria-label="主要セクションナビゲーション">
-      <button class="nav-btn active" type="button" data-target="list-section">一覧</button>
-      <button class="nav-btn" type="button" data-target="add-section">追加</button>
-      <button class="nav-btn" type="button" data-target="settings-section">設定</button>
+      <button class="nav-btn active" type="button" data-target="list-section" aria-label="一覧セクションへ移動">一覧</button>
+      <button class="nav-btn" type="button" data-target="add-section" aria-label="追加セクションへ移動">追加</button>
+      <button class="nav-btn" type="button" data-target="settings-section" aria-label="設定セクションへ移動">設定</button>
     </nav>
 
     <button id="quick-add-fab" class="quick-add-fab" type="button" aria-label="記念日をクイック追加">＋</button>
-    <button id="floating-share" class="floating-share" type="button">📤 共有</button>
+    <button id="floating-share" class="floating-share" type="button" aria-label="表示中の記念日を共有">📤 共有</button>
 
     <section id="quick-modal" class="quick-modal hidden" aria-label="クイック追加モーダル" aria-hidden="true">
       <div id="quick-overlay" class="quick-overlay"></div>
@@ -181,16 +182,16 @@
           <h2 id="quick-modal-title">クイック追加</h2>
           <button id="quick-close" class="icon-btn quick-close" type="button" aria-label="閉じる">×</button>
         </div>
-        <form id="quick-form" class="quick-form">
+        <form id="quick-form" class="quick-form" aria-label="クイック追加フォーム">
           <label>
             タイトル
-            <input id="quick-title" maxlength="40" placeholder="例: 誕生日、記念日、イベント" required />
+            <input id="quick-title" maxlength="40" placeholder="例: 誕生日、記念日、イベント" required aria-label="クイック追加タイトル" />
           </label>
           <label>
             日付
-            <input id="quick-date" type="date" required />
+            <input id="quick-date" type="date" required aria-label="クイック追加の日付" />
           </label>
-          <p id="quick-error" class="error"></p>
+          <p id="quick-error" class="error" role="alert" aria-live="assertive"></p>
           <div class="quick-actions">
             <button class="btn" type="submit">保存</button>
             <a href="#add-section" id="quick-to-detail" class="quick-link">詳細へ</a>
@@ -209,7 +210,8 @@
     </section>
 
     <canvas id="share-canvas" width="1080" height="1350" hidden></canvas>
-    <div id="toast" class="toast"></div>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <div id="sr-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
 
     <script type="module" src="./src/app.js"></script>
   </body>

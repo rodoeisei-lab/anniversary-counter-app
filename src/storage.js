@@ -7,6 +7,7 @@ export function loadState(storageKey) {
     return {
       anniversaries: normalizeItems(raw.anniversaries),
       darkMode: !!raw.darkMode,
+      themeMode: normalizeThemeMode(raw.themeMode, raw.darkMode),
       presentingId: "",
       onboardingDone: !!raw.onboardingDone,
       usage: normalizeUsage(raw.usage),
@@ -16,6 +17,7 @@ export function loadState(storageKey) {
     return {
       anniversaries: structuredClone(SAMPLE_ITEMS),
       darkMode: false,
+      themeMode: "auto",
       presentingId: "",
       onboardingDone: false,
       usage: { openedDates: [] },
@@ -28,6 +30,7 @@ export function persistState(storageKey, state) {
   const payload = {
     anniversaries: state.anniversaries,
     darkMode: state.darkMode,
+    themeMode: state.themeMode,
     onboardingDone: state.onboardingDone,
     usage: state.usage,
     view: state.view
@@ -58,4 +61,9 @@ function normalizeView(view) {
   const sortType = ["nearest", "dateAsc", "titleAsc"].includes(view?.sortType) ? view.sortType : "nearest";
   const filterType = ["all", "past", "today", "future"].includes(view?.filterType) ? view.filterType : "all";
   return { sortType, filterType };
+}
+
+function normalizeThemeMode(mode, darkMode) {
+  if (["auto", "light", "dark"].includes(mode)) return mode;
+  return darkMode ? "dark" : "auto";
 }
