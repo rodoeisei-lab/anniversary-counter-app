@@ -21,7 +21,7 @@ export function loadState(storageKey) {
       presentingId: "",
       onboardingDone: false,
       usage: { openedDates: [] },
-      view: { sortType: "nearest", filterType: "all" }
+      view: { sortType: "nearest", filterType: "all", categoryFilter: "all", searchQuery: "" }
     };
   }
 }
@@ -47,6 +47,7 @@ function normalizeItems(list) {
       title: cleanText(item.title, 40),
       date: item.date,
       message: cleanText(item.message, 120),
+      category: normalizeCategory(item.category),
       theme: ["simple", "romantic", "pop"].includes(item.theme) ? item.theme : "simple",
       createdAt: item.createdAt || new Date().toISOString()
     }));
@@ -58,12 +59,21 @@ function normalizeUsage(usage) {
 }
 
 function normalizeView(view) {
-  const sortType = ["nearest", "dateAsc", "titleAsc"].includes(view?.sortType) ? view.sortType : "nearest";
-  const filterType = ["all", "past", "today", "future"].includes(view?.filterType) ? view.filterType : "all";
-  return { sortType, filterType };
+  const sortType = ["nearest", "farthest", "created"].includes(view?.sortType) ? view.sortType : "nearest";
+  const filterType = ["all", "within30", "within7"].includes(view?.filterType) ? view.filterType : "all";
+  const categoryFilter = ["all", "birthday", "event", "anniversary", "other"].includes(view?.categoryFilter)
+    ? view.categoryFilter
+    : "all";
+  const searchQuery = cleanText(view?.searchQuery || "", 40);
+  return { sortType, filterType, categoryFilter, searchQuery };
 }
 
 function normalizeThemeMode(mode, darkMode) {
   if (["auto", "light", "dark"].includes(mode)) return mode;
   return darkMode ? "dark" : "auto";
+}
+
+function normalizeCategory(category) {
+  if (["birthday", "event", "anniversary", "other"].includes(category)) return category;
+  return "anniversary";
 }

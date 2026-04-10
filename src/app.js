@@ -35,11 +35,14 @@ const el = {
   listSentinel: document.getElementById("list-sentinel"),
   sortSelect: document.getElementById("sort-select"),
   filterToggle: document.getElementById("filter-toggle"),
+  searchInput: document.getElementById("search-input"),
+  categoryFilter: document.getElementById("category-filter"),
   form: document.getElementById("anniversary-form"),
   annId: document.getElementById("ann-id"),
   annTitle: document.getElementById("ann-title"),
   annDate: document.getElementById("ann-date"),
   annMessage: document.getElementById("ann-message"),
+  annCategory: document.getElementById("ann-category"),
   annTheme: document.getElementById("ann-theme"),
   formError: document.getElementById("form-error"),
   cancelEdit: document.getElementById("cancel-edit"),
@@ -58,6 +61,7 @@ const el = {
   quickForm: document.getElementById("quick-form"),
   quickTitle: document.getElementById("quick-title"),
   quickDate: document.getElementById("quick-date"),
+  quickCategory: document.getElementById("quick-category"),
   quickError: document.getElementById("quick-error"),
   quickToDetail: document.getElementById("quick-to-detail"),
   presentMode: document.getElementById("present-mode"),
@@ -95,6 +99,7 @@ bindEvents();
 resetForm();
 initSectionNav();
 setupListRendering();
+startLiveDateRefresh();
 
 function bindEvents() {
   el.form.addEventListener("submit", onSubmit);
@@ -135,6 +140,16 @@ function bindEvents() {
     const btn = event.target.closest("button[data-filter]");
     if (!btn) return;
     state.view.filterType = btn.dataset.filter;
+    persist();
+    renderCards();
+  });
+  el.searchInput.addEventListener("input", () => {
+    state.view.searchQuery = cleanText(el.searchInput.value, 40);
+    persist();
+    renderCards();
+  });
+  el.categoryFilter.addEventListener("change", () => {
+    state.view.categoryFilter = el.categoryFilter.value;
     persist();
     renderCards();
   });
@@ -265,7 +280,10 @@ function renderCards() {
   listRuntime.allItems = list;
   listRuntime.currentIndex = 0;
   listRuntime.hasMore = list.length > 0;
-  const currentLabel = `${FILTER_LABEL[state.view.filterType]}・${SORT_LABEL[state.view.sortType]}`;
+  const labelParts = [FILTER_LABEL[state.view.filterType], SORT_LABEL[state.view.sortType]];
+  if (state.view.categoryFilter !== "all") labelParts.push(`カテゴリ:${CATEGORY_LABEL[state.view.categoryFilter]}`);
+  if (state.view.searchQuery) labelParts.push(`検索:${state.view.searchQuery}`);
+  const currentLabel = labelParts.join("・");
   el.listState.textContent = `表示状態: ${currentLabel}（${list.length}件）`;
 
   el.list.textContent = "";
@@ -397,6 +415,11 @@ function buildAnniversaryCard(item, today = new Date()) {
   message.textContent = item.message || "特別メッセージを追加できます";
   card.appendChild(message);
 
+  const categoryTag = document.createElement("p");
+  categoryTag.className = "ann-tag";
+  categoryTag.textContent = CATEGORY_LABEL[item.category] || CATEGORY_LABEL.anniversary;
+  card.appendChild(categoryTag);
+
   const miniProgress = document.createElement("div");
   miniProgress.className = "mini-progress";
   const miniLabel = document.createElement("div");
@@ -511,6 +534,7 @@ function onSubmit(event) {
     title: cleanText(el.annTitle.value, 40),
     date: el.annDate.value,
     message: cleanText(el.annMessage.value, 120),
+    category: el.annCategory.value,
     theme: el.annTheme.value,
     createdAt
   };
@@ -524,6 +548,7 @@ function onSubmit(event) {
 function validate(item) {
   if (!item.title) return "タイトルを入力してください";
   if (!item.date) return "日付を選択してください";
+  if (!CATEGORY_LABEL[item.category]) return "カテゴリが不正です";
   if (!THEMES[item.theme]) return "テーマが不正です";
   return "";
 }
@@ -533,6 +558,7 @@ function fillForm(item) {
   el.annTitle.value = item.title;
   el.annDate.value = item.date;
   el.annMessage.value = item.message || "";
+  el.annCategory.value = item.category || "anniversary";
   el.annTheme.value = item.theme || "simple";
   el.formError.textContent = "";
   const details = el.addSection.querySelector("details");
@@ -555,6 +581,7 @@ function onQuickSubmit(event) {
     title: cleanText(el.quickTitle.value, 40),
     date: el.quickDate.value,
     message: "",
+    category: el.quickCategory.value,
     theme: "simple",
     createdAt: new Date().toISOString()
   };
@@ -672,28 +699,36 @@ function getFeatured() {
 }
 
 const SORT_LABEL = {
-  nearest: "次に近い順",
-  dateAsc: "日付の古い順",
-  titleAsc: "タイトル昇順"
+  nearest: "近い順",
+  farthest: "遠い順",
+  created: "登録順"
 };
 
 const FILTER_LABEL = {
   all: "すべて",
-  past: "過去",
-  today: "今日",
-  future: "未来"
+  within30: "30日以内",
+  within7: "7日以内"
+};
+
+const CATEGORY_LABEL = {
+  birthday: "誕生日",
+  event: "イベント",
+  anniversary: "記念日",
+  other: "その他"
 };
 
 function initViewStateFromQuery() {
   const params = new URLSearchParams(window.location.search);
   const queryFilter = params.get("filter");
-  if (["all", "past", "today", "future"].includes(queryFilter)) {
+  if (["all", "within30", "within7"].includes(queryFilter)) {
     state.view.filterType = queryFilter;
   }
 }
 
 function syncOperationBar() {
   el.sortSelect.value = state.view.sortType;
+  el.searchInput.value = state.view.searchQuery || "";
+  el.categoryFilter.value = state.view.categoryFilter || "all";
   [...el.filterToggle.querySelectorAll(".filter-btn")].forEach((btn) => {
     const active = btn.dataset.filter === state.view.filterType;
     btn.classList.toggle("is-active", active);
@@ -703,42 +738,56 @@ function syncOperationBar() {
 
 function getVisibleAnniversaries(today = new Date()) {
   const copied = [...state.anniversaries];
-  const filtered = copied.filter((item) => matchFilter(item, state.view.filterType, today));
+  const filtered = copied.filter((item) => matchFilter(item, today));
   const sorted = sortItems(filtered, state.view.sortType, today);
   syncFilterQuery(state.view.filterType);
   return sorted;
 }
 
-function matchFilter(item, filterType, today = new Date()) {
-  if (filterType === "all") return true;
+function matchFilter(item, today = new Date()) {
   const diff = daysFromToday(item.date, today);
-  if (filterType === "past") return diff < 0;
-  if (filterType === "today") return diff === 0;
-  if (filterType === "future") return diff > 0;
+  if (state.view.filterType === "within7" && (diff < 0 || diff > 7)) return false;
+  if (state.view.filterType === "within30" && (diff < 0 || diff > 30)) return false;
+  if (state.view.categoryFilter !== "all" && item.category !== state.view.categoryFilter) return false;
+  const q = (state.view.searchQuery || "").trim().toLowerCase();
+  if (q) {
+    const text = `${item.title} ${item.message || ""} ${CATEGORY_LABEL[item.category] || ""}`.toLowerCase();
+    if (!text.includes(q)) return false;
+  }
   return true;
 }
 
 function sortItems(list, sortType, today = new Date()) {
-  if (sortType === "dateAsc") return sortByDateAsc(list);
-  if (sortType === "titleAsc") return sortByTitleAsc(list);
+  if (sortType === "farthest") return sortByFarthest(list, today);
+  if (sortType === "created") return sortByCreated(list);
   return sortByNearest(list, today);
 }
 
 function sortByNearest(list, today = new Date()) {
   return [...list].sort((a, b) => {
-    const d0 = Math.abs(daysFromToday(a.date, today));
-    const d1 = Math.abs(daysFromToday(b.date, today));
+    const d0 = daysFromToday(a.date, today);
+    const d1 = daysFromToday(b.date, today);
     if (d0 !== d1) return d0 - d1;
     return a.date.localeCompare(b.date);
   });
 }
 
-function sortByDateAsc(list) {
-  return [...list].sort((a, b) => a.date.localeCompare(b.date));
+function sortByFarthest(list, today = new Date()) {
+  return [...list].sort((a, b) => {
+    const d0 = daysFromToday(a.date, today);
+    const d1 = daysFromToday(b.date, today);
+    if (d0 !== d1) return d1 - d0;
+    return b.date.localeCompare(a.date);
+  });
 }
 
-function sortByTitleAsc(list) {
-  return [...list].sort((a, b) => a.title.localeCompare(b.title, "ja"));
+function sortByCreated(list) {
+  return [...list].sort((a, b) => {
+    const t0 = new Date(a.createdAt || 0).getTime();
+    const t1 = new Date(b.createdAt || 0).getTime();
+    if (t0 !== t1) return t0 - t1;
+    return a.id.localeCompare(b.id);
+  });
 }
 
 function getUrgencyClass(diff) {
@@ -756,6 +805,10 @@ function syncFilterQuery(filterType) {
     url.searchParams.set("filter", filterType);
   }
   window.history.replaceState({}, "", url);
+}
+
+function startLiveDateRefresh() {
+  setInterval(() => render(), 60000);
 }
 
 function trackOpenToday() {
