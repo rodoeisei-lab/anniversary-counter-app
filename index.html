@@ -76,17 +76,30 @@
               <label class="sort-box">
                 並び替え
                 <select id="sort-select" aria-label="記念日一覧の並び替え">
-                  <option value="nearest">次に近い順</option>
-                  <option value="dateAsc">日付の古い順</option>
-                  <option value="titleAsc">タイトル昇順</option>
+                  <option value="nearest">近い順</option>
+                  <option value="farthest">遠い順</option>
+                  <option value="created">登録順</option>
                 </select>
               </label>
               <div id="filter-toggle" class="filter-toggle" role="tablist" aria-label="日付フィルタ">
                 <button type="button" class="filter-btn is-active" data-filter="all" role="tab" aria-selected="true">すべて</button>
-                <button type="button" class="filter-btn" data-filter="past" role="tab" aria-selected="false">過去</button>
-                <button type="button" class="filter-btn" data-filter="today" role="tab" aria-selected="false">今日</button>
-                <button type="button" class="filter-btn" data-filter="future" role="tab" aria-selected="false">未来</button>
+                <button type="button" class="filter-btn" data-filter="within30" role="tab" aria-selected="false">30日以内</button>
+                <button type="button" class="filter-btn" data-filter="within7" role="tab" aria-selected="false">7日以内</button>
               </div>
+              <label class="search-box">
+                検索
+                <input id="search-input" type="search" inputmode="search" placeholder="タイトル・メッセージ検索" aria-label="記念日の検索" />
+              </label>
+              <label class="category-box">
+                カテゴリ
+                <select id="category-filter" aria-label="カテゴリで絞り込み">
+                  <option value="all">すべて</option>
+                  <option value="birthday">誕生日</option>
+                  <option value="event">イベント</option>
+                  <option value="anniversary">記念日</option>
+                  <option value="other">その他</option>
+                </select>
+              </label>
             </div>
             <p id="list-state" class="list-state" role="status" aria-live="polite">表示状態: --</p>
             <div id="render-mode-toggle" class="render-mode-toggle" role="group" aria-label="描画モード切替">
@@ -125,6 +138,15 @@
                 <label>
                   特別メッセージ
                   <textarea id="ann-message" rows="2" maxlength="120" placeholder="いつもありがとう" aria-label="特別メッセージ"></textarea>
+                </label>
+                <label>
+                  カテゴリ
+                  <select id="ann-category" aria-label="記念日のカテゴリ">
+                    <option value="anniversary">記念日</option>
+                    <option value="birthday">誕生日</option>
+                    <option value="event">イベント</option>
+                    <option value="other">その他</option>
+                  </select>
                 </label>
                 <label>
                   テーマ
@@ -190,6 +212,15 @@
           <label>
             日付
             <input id="quick-date" type="date" required aria-label="クイック追加の日付" />
+          </label>
+          <label>
+            カテゴリ
+            <select id="quick-category" aria-label="クイック追加カテゴリ">
+              <option value="anniversary">記念日</option>
+              <option value="birthday">誕生日</option>
+              <option value="event">イベント</option>
+              <option value="other">その他</option>
+            </select>
           </label>
           <p id="quick-error" class="error" role="alert" aria-live="assertive"></p>
           <div class="quick-actions">
