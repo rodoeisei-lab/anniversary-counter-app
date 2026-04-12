@@ -73,6 +73,8 @@ const el = {
   backupImport: document.getElementById("backup-import"),
   backupFile: document.getElementById("backup-file"),
   backupLast: document.getElementById("backup-last"),
+  backupPreview: document.getElementById("backup-preview"),
+  importModeRadios: [...document.querySelectorAll('input[name="import-mode"]')],
   canvas: document.getElementById("share-canvas"),
   toast: document.getElementById("toast"),
   srStatus: document.getElementById("sr-status"),
@@ -837,11 +839,18 @@ function renderBackupInfo() {
 function exportBackup() {
   try {
     const appRaw = localStorage.getItem(STORAGE_KEY);
-    const appData = appRaw ? JSON.parse(appRaw) : { anniversaries: [] };
+    const appData = appRaw ? JSON.parse(appRaw) : {};
     const payload = {
       version: 1,
       exportedAt: new Date().toISOString(),
-      appData
+      appData: {
+        anniversaries: Array.isArray(appData.anniversaries) ? appData.anniversaries : [],
+        darkMode: !!appData.darkMode,
+        themeMode: appData.themeMode || "auto",
+        onboardingDone: !!appData.onboardingDone,
+        usage: appData.usage || { openedDates: [] },
+        view: appData.view || { sortType: "nearest", filterType: "all", categoryFilter: "all", searchQuery: "" }
+      }
     };
     const text = JSON.stringify(payload, null, 2);
     const blob = new Blob([text], { type: "application/json" });
@@ -873,12 +882,17 @@ async function importBackup(event) {
     const text = await file.text();
     const data = JSON.parse(text);
     const appData = validateBackupData(data);
-    const ok = window.confirm("現在のデータを上書きして復元します。よろしいですか？");
+    const mode = getImportMode();
+    el.backupPreview.textContent = `復元前チェック: ${appData.anniversaries.length}件 読み込み可能`;
+    const modeLabel = mode === "merge" ? "追加（マージ）" : "上書き";
+    const ok = window.confirm(`${appData.anniversaries.length}件を${modeLabel}で復元します。よろしいですか？`);
     if (!ok) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
-    announce("復元が完了しました。画面を更新します。");
+    const next = mode === "merge" ? mergeImportData(appData) : appData;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    announce(`復元が完了しました（${appData.anniversaries.length}件読み込み）`);
     setTimeout(() => window.location.reload(), 350);
   } catch (error) {
+    el.backupPreview.textContent = "復元前チェック: エラーあり";
     announce(`復元に失敗しました: ${error.message || "JSON形式を確認してください"}`, "error");
   }
 }
@@ -888,8 +902,61 @@ function validateBackupData(data) {
   const appData = data.appData;
   if (!appData || typeof appData !== "object") throw new Error("バックアップの必須キー(appData)がありません");
   if (!Array.isArray(appData.anniversaries)) throw new Error("anniversaries が見つかりません");
-  if (!("usage" in appData)) throw new Error("usage が見つかりません");
-  return appData;
+  const normalizedItems = appData.anniversaries.map((item, idx) => normalizeBackupItem(item, idx));
+  const usage = appData.usage && Array.isArray(appData.usage.openedDates)
+    ? { openedDates: appData.usage.openedDates.filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)) }
+    : { openedDates: [] };
+  const view = appData.view || {};
+  return {
+    anniversaries: normalizedItems,
+    darkMode: !!appData.darkMode,
+    themeMode: ["auto", "light", "dark"].includes(appData.themeMode) ? appData.themeMode : "auto",
+    onboardingDone: !!appData.onboardingDone,
+    usage,
+    view: {
+      sortType: ["nearest", "farthest", "created"].includes(view.sortType) ? view.sortType : "nearest",
+      filterType: ["all", "within30", "within7"].includes(view.filterType) ? view.filterType : "all",
+      categoryFilter: ["all", "birthday", "event", "anniversary", "other"].includes(view.categoryFilter) ? view.categoryFilter : "all",
+      searchQuery: cleanText(view.searchQuery || "", 40)
+    }
+  };
+}
+
+function normalizeBackupItem(item, idx) {
+  if (!item || typeof item !== "object") throw new Error(`${idx + 1}件目: データがオブジェクトではありません`);
+  if (!item.id || typeof item.id !== "string") throw new Error(`${idx + 1}件目: id が不正です`);
+  if (!item.title || typeof item.title !== "string") throw new Error(`${idx + 1}件目: title が不正です`);
+  if (!item.date || typeof item.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(item.date)) {
+    throw new Error(`${idx + 1}件目: date は YYYY-MM-DD が必要です`);
+  }
+  return {
+    id: item.id,
+    title: cleanText(item.title, 40),
+    date: item.date,
+    message: cleanText(item.message || "", 120),
+    category: ["birthday", "event", "anniversary", "other"].includes(item.category) ? item.category : "anniversary",
+    theme: ["simple", "romantic", "pop"].includes(item.theme) ? item.theme : "simple",
+    createdAt: item.createdAt || new Date().toISOString()
+  };
+}
+
+function getImportMode() {
+  const checked = el.importModeRadios.find((node) => node.checked);
+  return checked?.value === "merge" ? "merge" : "overwrite";
+}
+
+function mergeImportData(imported) {
+  const merged = new Map();
+  state.anniversaries.forEach((item) => merged.set(item.id, item));
+  imported.anniversaries.forEach((item) => {
+    const key = merged.has(item.id) ? uid() : item.id;
+    merged.set(key, { ...item, id: key });
+  });
+  return {
+    ...state,
+    ...imported,
+    anniversaries: [...merged.values()]
+  };
 }
 
 function getOpenStreak() {
