@@ -722,3 +722,35 @@ textarea { resize: vertical; }
 .backup-actions .btn {
   min-height: 48px;
 }
+
+.backup-mode {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.backup-mode legend {
+  padding: 0 6px;
+  color: var(--text-soft);
+  font-size: .88rem;
+  font-weight: 700;
+}
+
+.backup-mode label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: .95rem;
+}
+
+.backup-future {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--muted);
+  font-size: .9rem;
+  display: grid;
+  gap: 4px;
+}
