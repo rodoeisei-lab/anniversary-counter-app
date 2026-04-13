@@ -403,6 +403,7 @@ textarea { resize: vertical; }
 .ann-card {
   border-radius: 20px;
   padding: 16px;
+  padding-top: 56px;
   color: #fff;
   position: relative;
   overflow: hidden;
@@ -429,6 +430,36 @@ textarea { resize: vertical; }
 .ann-title { font-size: 1.12rem; font-weight: 800; position: relative; z-index: 1; }
 .ann-days { font-size: clamp(2rem, 12vw, 3.3rem); font-weight: 900; margin-top: 8px; line-height: 1; position: relative; z-index: 1; }
 .ann-date, .ann-msg { margin-top: 8px; font-size: 1rem; line-height: 1.7; position: relative; z-index: 1; }
+.ann-share-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.26);
+  color: #fff;
+  font-size: 1.05rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  backdrop-filter: blur(2px);
+  transition: transform .16s ease, background-color .16s ease, filter .16s ease;
+}
+.ann-share-btn:active {
+  transform: scale(.93);
+  filter: brightness(0.9);
+}
+.ann-share-btn:hover {
+  background: rgba(255, 255, 255, 0.36);
+}
+.theme-pop .ann-share-btn {
+  color: #2e2500;
+  background: rgba(255,255,255,.45);
+}
 .ann-tag {
   margin-top: 10px;
   display: inline-flex;

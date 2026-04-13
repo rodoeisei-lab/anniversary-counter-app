@@ -3,20 +3,24 @@ import { daysFromToday, formatCountLabel, ymdToJp } from "./date-utils.js";
 
 export async function shareCard(item, canvas, notify) {
   if (!item) return notify("共有する記念日がありません");
-  const blob = await generateCardBlob(item, canvas);
-  const file = new File([blob], `anniversary-${item.id}.png`, { type: "image/png" });
-  const text = `${item.title} ${formatCountLabel(daysFromToday(item.date))} #ふたりカウント`;
+  const payload = buildSharePayload(item);
 
   try {
-    if (navigator.share && navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], title: item.title, text });
+    if (navigator.share) {
+      await navigator.share(payload);
       notify("共有シートを開きました");
-    } else {
-      notify("この端末は直接共有に未対応です。画像保存します");
-      await saveBlob(blob, `anniversary-${item.id}.png`);
+      return;
     }
+
+    if (!navigator.clipboard?.writeText) {
+      notify("この端末では共有・コピーに未対応です", "error");
+      return;
+    }
+
+    await navigator.clipboard.writeText(payload.text);
+    notify("コピーしました");
   } catch {
-    notify("共有をキャンセルしました");
+    notify("共有に失敗しました", "error");
   }
 }
 
@@ -61,6 +65,19 @@ async function generateCardBlob(item, canvas) {
   fillWrapped(ctx, item.message || "Special Message", 86, 860, 900, 74);
 
   return new Promise((resolve) => canvas.toBlob(resolve, "image/png", 1));
+}
+
+function buildSharePayload(item) {
+  const diff = daysFromToday(item.date);
+  const countLabel = formatCountLabel(diff);
+  const title = `${item.title} | ふたりカウント`;
+  const text = [
+    `📅 ${item.title}`,
+    `日付: ${ymdToJp(item.date)}`,
+    `カウント: ${countLabel}`,
+    `${item.title}まで${countLabel}！`
+  ].join("\n");
+  return { title, text };
 }
 
 function fillWrapped(ctx, text, x, y, maxWidth, lineHeight) {
