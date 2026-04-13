@@ -397,6 +397,8 @@ function buildAnniversaryCard(item, today = new Date()) {
   card.setAttribute("role", "article");
   card.setAttribute("aria-label", `${item.title}、${ymdToJp(item.date)}、${formatCountLabel(diff)}`);
 
+  card.appendChild(buildShareIconButton(item));
+
   const title = document.createElement("p");
   title.className = "ann-title";
   title.textContent = item.title;
@@ -439,13 +441,23 @@ function buildAnniversaryCard(item, today = new Date()) {
 
   const actions = document.createElement("div");
   actions.className = "ann-actions";
-  actions.appendChild(buildActionButton("共有", "share", item.id));
   actions.appendChild(buildActionButton("画像保存", "save", item.id));
   actions.appendChild(buildActionButton("全画面", "present", item.id));
   actions.appendChild(buildActionButton("編集", "edit", item.id));
   actions.appendChild(buildActionButton("削除", "delete", item.id));
   card.appendChild(actions);
   return card;
+}
+
+function buildShareIconButton(item) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "ann-share-btn";
+  btn.dataset.action = "share";
+  btn.dataset.id = item.id;
+  btn.textContent = "📤";
+  btn.setAttribute("aria-label", `${item.title}を共有`);
+  return btn;
 }
 
 function buildActionButton(label, action, id) {
