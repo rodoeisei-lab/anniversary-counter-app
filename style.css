@@ -276,10 +276,6 @@ h2 { font-size: 1.15rem; }
 .summary-main { margin-top: 6px; font-size: 1.05rem; font-weight: 800; }
 .summary-sub { margin-top: 4px; color: var(--text-soft); font-size: .95rem; }
 
-.progress-wrap { margin-top: 8px; }
-.progress-title { font-size: .95rem; font-weight: 700; }
-.progress-caption { margin-top: 8px; font-size: .95rem; color: var(--text-soft); line-height: 1.6; }
-
 .progress-track {
   margin-top: 8px;
   width: 100%;
@@ -293,33 +289,6 @@ h2 { font-size: 1.15rem; }
   height: 100%;
   border-radius: inherit;
   background: linear-gradient(90deg, #6d5efc, #3ec4ff);
-}
-.progress-fill.animated { animation: growIn 700ms ease-out; }
-
-.milestone-list {
-  margin-top: 10px;
-  display: grid;
-  gap: 6px;
-  color: var(--text-soft);
-  font-size: .98rem;
-}
-
-.notify-list ul {
-  margin-top: 8px;
-  padding-left: 0;
-  list-style: none;
-  display: grid;
-  gap: 8px;
-}
-
-.notify-list li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  border: 1px dashed var(--line);
-  border-radius: 12px;
-  padding: 10px 12px;
 }
 
 .btn, .icon-btn {
@@ -778,17 +747,6 @@ textarea { resize: vertical; }
     --danger-bg: rgba(179, 32, 68, 0.22);
     --hero-bg: linear-gradient(145deg, #1a2440, #222f53);
   }
-}
-
-.pulse { animation: pulse 2.4s ease-in-out infinite; }
-
-@keyframes growIn {
-  from { width: 0; }
-}
-
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.01); }
 }
 
 @media (min-width: 760px) {

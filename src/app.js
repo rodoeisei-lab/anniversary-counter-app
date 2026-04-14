@@ -191,12 +191,14 @@ function bindEvents() {
 
   el.shareMain.addEventListener("click", () => shareCard(getFeatured(), el.canvas, (text) => announce(text)));
   el.presentMain.addEventListener("click", () => openPresent(getFeatured()));
-  el.heroEmptyAdd.addEventListener("click", () => {
-    const details = el.addSection.querySelector("details");
-    if (details) details.open = true;
-    el.addSection.scrollIntoView({ behavior: "smooth", block: "start" });
-    setTimeout(() => el.annTitle.focus(), 60);
-  });
+  if (el.heroEmptyAdd) {
+    el.heroEmptyAdd.addEventListener("click", () => {
+      const details = el.addSection.querySelector("details");
+      if (details) details.open = true;
+      el.addSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      setTimeout(() => el.annTitle.focus(), 60);
+    });
+  }
   el.floatingShare.addEventListener("click", () => shareCard(getFeatured(), el.canvas, (text) => announce(text)));
   el.presentShare.addEventListener("click", () => shareCard(getPresentingOrFeatured(), el.canvas, (text) => announce(text)));
   el.presentSave.addEventListener("click", () => saveCardAsImage(getPresentingOrFeatured(), el.canvas, (text) => announce(text)));
@@ -270,7 +272,7 @@ function render() {
 
   const diff = daysFromToday(featured.date);
   const milestone = getMilestoneInfo(featured);
-  const all = getVisibleAnniversaries(new Date());
+  const all = getDashboardItems();
 
   const countText = formatCountLabel(diff);
   el.todayValue.textContent = countText;
@@ -808,6 +810,15 @@ function getVisibleAnniversaries(today = new Date()) {
   const sorted = sortItems(filtered, state.view.sortType, today);
   syncFilterQuery(state.view.filterType);
   return sorted;
+}
+
+function getDashboardItems() {
+  return [...state.anniversaries].sort((a, b) => {
+    const t0 = new Date(b.createdAt || 0).getTime();
+    const t1 = new Date(a.createdAt || 0).getTime();
+    if (t0 !== t1) return t0 - t1;
+    return b.id.localeCompare(a.id);
+  });
 }
 
 function matchFilter(item, today = new Date()) {
