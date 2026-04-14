@@ -13,9 +13,7 @@ import { loadState, persistState } from "./storage.js";
 import { cleanText, escapeHtml, notify } from "./utils.js";
 import { saveCardAsImage, shareCard } from "./share.js";
 
-const INITIAL_RENDER_COUNT = 20;
-const BATCH_RENDER_COUNT = 20;
-const SCROLL_FALLBACK_THRESHOLD = 260;
+const SORT_RENDER_DELAY = 16;
 
 const state = loadState(STORAGE_KEY);
 const el = {
@@ -28,11 +26,6 @@ const el = {
   checkinStats: document.getElementById("checkin-stats"),
   list: document.getElementById("anniversary-list"),
   listState: document.getElementById("list-state"),
-  renderModeToggle: document.getElementById("render-mode-toggle"),
-  listLoading: document.getElementById("list-loading"),
-  listMoreBtn: document.getElementById("list-more-btn"),
-  listComplete: document.getElementById("list-complete"),
-  listSentinel: document.getElementById("list-sentinel"),
   sortSelect: document.getElementById("sort-select"),
   filterToggle: document.getElementById("filter-toggle"),
   searchInput: document.getElementById("search-input"),
@@ -85,14 +78,7 @@ const el = {
 };
 
 const listRuntime = {
-  allItems: [],
-  currentIndex: 0,
-  chunkSize: BATCH_RENDER_COUNT,
-  isAppending: false,
-  hasMore: false,
-  renderMode: "infinite",
-  observer: null,
-  fallbackBound: false
+  renderTimer: 0
 };
 
 initViewStateFromQuery();
@@ -100,7 +86,6 @@ trackOpenToday();
 bindEvents();
 resetForm();
 initSectionNav();
-setupListRendering();
 startLiveDateRefresh();
 
 function bindEvents() {
@@ -135,7 +120,7 @@ function bindEvents() {
   el.sortSelect.addEventListener("change", () => {
     state.view.sortType = el.sortSelect.value;
     persist();
-    renderCards();
+    scheduleRenderCards();
   });
 
   el.filterToggle.addEventListener("click", (event) => {
@@ -143,20 +128,18 @@ function bindEvents() {
     if (!btn) return;
     state.view.filterType = btn.dataset.filter;
     persist();
-    renderCards();
+    scheduleRenderCards();
   });
   el.searchInput.addEventListener("input", () => {
     state.view.searchQuery = cleanText(el.searchInput.value, 40);
     persist();
-    renderCards();
+    scheduleRenderCards();
   });
   el.categoryFilter.addEventListener("change", () => {
     state.view.categoryFilter = el.categoryFilter.value;
     persist();
-    renderCards();
+    scheduleRenderCards();
   });
-  el.renderModeToggle.addEventListener("click", onRenderModeClick);
-  el.listMoreBtn.addEventListener("click", () => appendNextChunk());
 
   el.themeToggle.addEventListener("click", () => {
     state.themeMode = nextThemeMode(state.themeMode);
@@ -279,112 +262,60 @@ function renderCards() {
   syncOperationBar();
   const today = new Date();
   const list = getVisibleAnniversaries(today);
-  listRuntime.allItems = list;
-  listRuntime.currentIndex = 0;
-  listRuntime.hasMore = list.length > 0;
+  const grouped = groupAnniversaries(list, today);
   const labelParts = [FILTER_LABEL[state.view.filterType], SORT_LABEL[state.view.sortType]];
   if (state.view.categoryFilter !== "all") labelParts.push(`カテゴリ:${CATEGORY_LABEL[state.view.categoryFilter]}`);
   if (state.view.searchQuery) labelParts.push(`検索:${state.view.searchQuery}`);
   const currentLabel = labelParts.join("・");
-  el.listState.textContent = `表示状態: ${currentLabel}（${list.length}件）`;
-
-  el.list.textContent = "";
-  hideLoading();
-  el.listComplete.classList.add("hidden");
+  el.listState.textContent = `表示状態: ${currentLabel}（全${list.length}件 / これから${grouped.upcoming.length}件 / 過去${grouped.past.length}件）`;
 
   if (!list.length) {
     const empty = document.createElement("p");
-    empty.className = "muted";
-    empty.textContent = "該当なし";
-    el.list.appendChild(empty);
-    updateListFooter();
-    return;
-  }
-
-  const initialCount = Math.min(INITIAL_RENDER_COUNT, list.length);
-  appendNextChunk(initialCount);
-  updateListFooter();
-}
-
-function setupListRendering() {
-  if ("IntersectionObserver" in window) {
-    listRuntime.observer = new IntersectionObserver(
-      (entries) => {
-        const hit = entries.some((entry) => entry.isIntersecting);
-        if (!hit || listRuntime.renderMode !== "infinite") return;
-        appendNextChunk();
-      },
-      { root: null, rootMargin: "0px 0px 260px 0px", threshold: 0.01 }
-    );
-    listRuntime.observer.observe(el.listSentinel);
-  } else {
-    window.addEventListener("scroll", onScrollFallback, { passive: true });
-    listRuntime.fallbackBound = true;
-  }
-  syncRenderModeButtons();
-}
-
-function resetListRendering() {
-  listRuntime.allItems = [];
-  listRuntime.currentIndex = 0;
-  listRuntime.hasMore = false;
-  listRuntime.isAppending = false;
-  el.list.textContent = "";
-  hideLoading();
-  updateListFooter();
-}
-
-function onRenderModeClick(event) {
-  const btn = event.target.closest("button[data-mode]");
-  if (!btn) return;
-  const mode = btn.dataset.mode;
-  if (!["infinite", "paging"].includes(mode)) return;
-  if (listRuntime.renderMode === mode) return;
-  listRuntime.renderMode = mode;
-  syncRenderModeButtons();
-  updateListFooter();
-  announce(`描画モードを${mode === "infinite" ? "自動読込" : "ページ送り"}に変更しました`);
-  if (mode === "infinite") onScrollFallback();
-}
-
-function syncRenderModeButtons() {
-  [...el.renderModeToggle.querySelectorAll(".mode-btn")].forEach((btn) => {
-    btn.classList.toggle("is-active", btn.dataset.mode === listRuntime.renderMode);
-    btn.setAttribute("aria-pressed", String(btn.dataset.mode === listRuntime.renderMode));
-  });
-}
-
-function onScrollFallback() {
-  if (listRuntime.renderMode !== "infinite" || !listRuntime.hasMore || listRuntime.isAppending) return;
-  const remained = document.documentElement.scrollHeight - (window.scrollY + window.innerHeight);
-  if (remained <= SCROLL_FALLBACK_THRESHOLD) appendNextChunk();
-}
-
-function appendNextChunk(forcedCount) {
-  if (listRuntime.isAppending || !listRuntime.hasMore) return;
-  listRuntime.isAppending = true;
-  showLoading();
-
-  const amount = Number.isInteger(forcedCount) ? forcedCount : listRuntime.chunkSize;
-  const next = listRuntime.allItems.slice(listRuntime.currentIndex, listRuntime.currentIndex + amount);
-  if (!next.length) {
-    hideLoading();
-    listRuntime.hasMore = false;
-    listRuntime.isAppending = false;
-    updateListFooter();
+    empty.className = "list-empty";
+    empty.textContent = "記念日がありません。まずは1件追加してみましょう。";
+    el.list.replaceChildren(empty);
     return;
   }
 
   const fragment = document.createDocumentFragment();
-  const today = new Date();
-  next.forEach((item) => fragment.appendChild(buildAnniversaryCard(item, today)));
-  el.list.appendChild(fragment);
+  fragment.appendChild(buildGroupSection("これからの予定", grouped.upcoming, today));
+  fragment.appendChild(buildGroupSection("過去の記念日", grouped.past, today));
+  el.list.replaceChildren(fragment);
+}
 
-  listRuntime.currentIndex += next.length;
-  listRuntime.hasMore = listRuntime.currentIndex < listRuntime.allItems.length;
-  listRuntime.isAppending = false;
-  hideLoading();
-  updateListFooter();
+function resetListRendering() {
+  window.clearTimeout(listRuntime.renderTimer);
+  el.list.textContent = "";
+}
+
+function scheduleRenderCards() {
+  window.clearTimeout(listRuntime.renderTimer);
+  listRuntime.renderTimer = window.setTimeout(() => {
+    requestAnimationFrame(() => renderCards());
+  }, SORT_RENDER_DELAY);
+}
+
+function buildGroupSection(title, items, today) {
+  const section = document.createElement("section");
+  section.className = "ann-group";
+  const heading = document.createElement("h3");
+  heading.className = "ann-group-heading";
+  heading.textContent = `${title}（${items.length}件）`;
+  section.appendChild(heading);
+
+  if (!items.length) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = "該当なし";
+    section.appendChild(empty);
+    return section;
+  }
+
+  const list = document.createElement("div");
+  list.className = "ann-group-list";
+  items.forEach((item) => list.appendChild(buildAnniversaryCard(item, today)));
+  section.appendChild(list);
+  return section;
 }
 
 function buildAnniversaryCard(item, today = new Date()) {
@@ -469,27 +400,6 @@ function buildActionButton(label, action, id) {
   btn.textContent = label;
   btn.setAttribute("aria-label", `${label}：${id}`);
   return btn;
-}
-
-function showLoading() {
-  el.listLoading.classList.remove("hidden");
-  el.listLoading.setAttribute("aria-busy", "true");
-  setBusy(el.listMoreBtn, true);
-}
-
-function hideLoading() {
-  el.listLoading.classList.add("hidden");
-  el.listLoading.setAttribute("aria-busy", "false");
-  setBusy(el.listMoreBtn, false);
-}
-
-function updateListFooter() {
-  const hasItems = listRuntime.allItems.length > 0;
-  const completed = hasItems && !listRuntime.hasMore;
-  el.listComplete.classList.toggle("hidden", !completed);
-
-  const showMoreBtn = hasItems && listRuntime.renderMode === "paging" && listRuntime.hasMore;
-  el.listMoreBtn.classList.toggle("hidden", !showMoreBtn);
 }
 
 function buildSummary(featured, milestone) {
@@ -713,9 +623,9 @@ function getFeatured() {
 }
 
 const SORT_LABEL = {
-  nearest: "近い順",
-  farthest: "遠い順",
-  created: "登録順"
+  nearest: "日付が近い順（未来優先）",
+  created: "登録日が新しい順",
+  title: "タイトル順"
 };
 
 const FILTER_LABEL = {
@@ -753,9 +663,25 @@ function syncOperationBar() {
 function getVisibleAnniversaries(today = new Date()) {
   const copied = [...state.anniversaries];
   const filtered = copied.filter((item) => matchFilter(item, today));
-  const sorted = sortItems(filtered, state.view.sortType, today);
   syncFilterQuery(state.view.filterType);
-  return sorted;
+  return filtered;
+}
+
+function groupAnniversaries(list, today = new Date()) {
+  const upcoming = [];
+  const past = [];
+  list.forEach((item) => {
+    const diff = daysFromToday(item.date, today);
+    if (diff >= 0) {
+      upcoming.push(item);
+    } else {
+      past.push(item);
+    }
+  });
+  return {
+    upcoming: sortItems(upcoming, state.view.sortType, today, "upcoming"),
+    past: sortItems(past, state.view.sortType, today, "past")
+  };
 }
 
 function matchFilter(item, today = new Date()) {
@@ -771,36 +697,38 @@ function matchFilter(item, today = new Date()) {
   return true;
 }
 
-function sortItems(list, sortType, today = new Date()) {
-  if (sortType === "farthest") return sortByFarthest(list, today);
-  if (sortType === "created") return sortByCreated(list);
-  return sortByNearest(list, today);
+function sortItems(list, sortType, today = new Date(), groupType = "upcoming") {
+  if (sortType === "created") return sortByCreatedNewest(list);
+  if (sortType === "title") return sortByTitle(list);
+  return sortByNearestWithFutureFirst(list, today, groupType);
 }
 
-function sortByNearest(list, today = new Date()) {
+function sortByNearestWithFutureFirst(list, today = new Date(), groupType = "upcoming") {
   return [...list].sort((a, b) => {
     const d0 = daysFromToday(a.date, today);
     const d1 = daysFromToday(b.date, today);
-    if (d0 !== d1) return d0 - d1;
+    if (d0 !== d1) {
+      if (groupType === "past") return d1 - d0;
+      return d0 - d1;
+    }
     return a.date.localeCompare(b.date);
   });
 }
 
-function sortByFarthest(list, today = new Date()) {
-  return [...list].sort((a, b) => {
-    const d0 = daysFromToday(a.date, today);
-    const d1 = daysFromToday(b.date, today);
-    if (d0 !== d1) return d1 - d0;
-    return b.date.localeCompare(a.date);
-  });
-}
-
-function sortByCreated(list) {
+function sortByCreatedNewest(list) {
   return [...list].sort((a, b) => {
     const t0 = new Date(a.createdAt || 0).getTime();
     const t1 = new Date(b.createdAt || 0).getTime();
-    if (t0 !== t1) return t0 - t1;
-    return a.id.localeCompare(b.id);
+    if (t0 !== t1) return t1 - t0;
+    return b.id.localeCompare(a.id);
+  });
+}
+
+function sortByTitle(list) {
+  return [...list].sort((a, b) => {
+    const byTitle = String(a.title || "").localeCompare(String(b.title || ""), "ja");
+    if (byTitle !== 0) return byTitle;
+    return a.date.localeCompare(b.date);
   });
 }
 
@@ -926,7 +854,7 @@ function validateBackupData(data) {
     onboardingDone: !!appData.onboardingDone,
     usage,
     view: {
-      sortType: ["nearest", "farthest", "created"].includes(view.sortType) ? view.sortType : "nearest",
+      sortType: ["nearest", "created", "title"].includes(view.sortType) ? view.sortType : "nearest",
       filterType: ["all", "within30", "within7"].includes(view.filterType) ? view.filterType : "all",
       categoryFilter: ["all", "birthday", "event", "anniversary", "other"].includes(view.categoryFilter) ? view.categoryFilter : "all",
       searchQuery: cleanText(view.searchQuery || "", 40)
