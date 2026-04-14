@@ -21,10 +21,13 @@ const state = loadState(STORAGE_KEY);
 const el = {
   todayValue: document.getElementById("today-value"),
   todayCaption: document.getElementById("today-caption"),
+  heroStory: document.getElementById("hero-story"),
+  heroMood: document.getElementById("hero-mood"),
+  heroEmptyGuide: document.getElementById("hero-empty-guide"),
+  heroEmptyAdd: document.getElementById("hero-empty-add"),
   deltaBadge: document.getElementById("delta-badge"),
-  summary: document.getElementById("today-summary"),
-  milestonePanel: document.getElementById("milestone-panel"),
-  notifyList: document.getElementById("notify-list"),
+  recentFlow: document.getElementById("recent-flow"),
+  nextActions: document.getElementById("next-actions"),
   checkinStats: document.getElementById("checkin-stats"),
   list: document.getElementById("anniversary-list"),
   listState: document.getElementById("list-state"),
@@ -51,7 +54,6 @@ const el = {
   onboarding: document.getElementById("onboarding"),
   onboardingClose: document.getElementById("onboarding-close"),
   shareMain: document.getElementById("share-main"),
-  downloadMain: document.getElementById("download-main"),
   presentMain: document.getElementById("present-main"),
   floatingShare: document.getElementById("floating-share"),
   quickAddFab: document.getElementById("quick-add-fab"),
@@ -188,8 +190,13 @@ function bindEvents() {
   });
 
   el.shareMain.addEventListener("click", () => shareCard(getFeatured(), el.canvas, (text) => announce(text)));
-  el.downloadMain.addEventListener("click", () => saveCardAsImage(getFeatured(), el.canvas, (text) => announce(text)));
   el.presentMain.addEventListener("click", () => openPresent(getFeatured()));
+  el.heroEmptyAdd.addEventListener("click", () => {
+    const details = el.addSection.querySelector("details");
+    if (details) details.open = true;
+    el.addSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    setTimeout(() => el.annTitle.focus(), 60);
+  });
   el.floatingShare.addEventListener("click", () => shareCard(getFeatured(), el.canvas, (text) => announce(text)));
   el.presentShare.addEventListener("click", () => shareCard(getPresentingOrFeatured(), el.canvas, (text) => announce(text)));
   el.presentSave.addEventListener("click", () => saveCardAsImage(getPresentingOrFeatured(), el.canvas, (text) => announce(text)));
@@ -245,19 +252,25 @@ function render() {
   renderBackupInfo();
 
   const featured = getFeatured();
+  const streak = getOpenStreak();
+  el.checkinStats.textContent = `連続チェック ${streak} 日`;
+
   if (!featured) {
     el.todayValue.textContent = "--";
-    el.todayCaption.textContent = "記念日を追加すると、今日のサマリーが表示されます。";
-    el.summary.innerHTML = "";
-    el.milestonePanel.innerHTML = "";
-    el.notifyList.innerHTML = "";
-    el.checkinStats.textContent = "連続チェック 0 日";
+    el.todayCaption.textContent = "最初の記録を追加すると、ふたりのストーリーが育ちはじめます。";
+    el.heroStory.textContent = "まずは「付き合った日」や「最近うれしかった出来事」を1件だけ登録してみましょう。";
+    el.deltaBadge.textContent = "今日の変化: --";
+    el.heroMood.textContent = "気分: これから";
+    el.heroEmptyGuide.classList.remove("hidden");
+    el.recentFlow.innerHTML = `<li class="flow-empty">まだ流れがありません。最初の記録を追加すると、ここに最近の出来事が並びます。</li>`;
+    el.nextActions.innerHTML = buildEmptyActions(streak);
     resetListRendering();
     return;
   }
 
   const diff = daysFromToday(featured.date);
   const milestone = getMilestoneInfo(featured);
+  const all = getVisibleAnniversaries(new Date());
 
   const countText = formatCountLabel(diff);
   el.todayValue.textContent = countText;
@@ -267,11 +280,11 @@ function render() {
   el.deltaBadge.textContent = `今日の変化: ${deltaText}`;
   el.deltaBadge.setAttribute("aria-label", `昨日との差分は${deltaText}`);
   el.deltaBadge.classList.toggle("is-positive", true);
-
-  el.summary.innerHTML = buildSummary(featured, milestone);
-  el.milestonePanel.innerHTML = buildMilestonePanel(featured, milestone);
-  el.notifyList.innerHTML = buildNotifyList(featured);
-  el.checkinStats.textContent = `連続チェック ${getOpenStreak()} 日`;
+  el.heroStory.textContent = buildHeroStory(featured, all);
+  el.heroMood.textContent = `気分: ${getMoodLabel(all, streak)}`;
+  el.heroEmptyGuide.classList.add("hidden");
+  el.recentFlow.innerHTML = buildRecentFlow(all);
+  el.nextActions.innerHTML = buildNextActions(featured, milestone, all);
   renderCards();
 }
 
@@ -492,52 +505,91 @@ function updateListFooter() {
   el.listMoreBtn.classList.toggle("hidden", !showMoreBtn);
 }
 
-function buildSummary(featured, milestone) {
-  const nearest = getNearestAnniversary(state.anniversaries);
-  const nextMilestoneIn = daysFromToday(milestone.nextDate);
-  return `
-    <article class="summary-item highlight pulse">
-      <p class="summary-label">いちばん近い記念日</p>
-      <p class="summary-main">${escapeHtml(nearest.title)}</p>
-      <p class="summary-sub">${ymdToJp(nearest.date)} / ${formatCountLabel(daysFromToday(nearest.date))}</p>
-    </article>
-    <article class="summary-item">
-      <p class="summary-label">次の節目</p>
-      <p class="summary-main">${milestone.next}日目</p>
-      <p class="summary-sub">${ymdToJp(milestone.nextDate)}（あと${Math.max(0, nextMilestoneIn)}日）</p>
-    </article>
-    <article class="summary-item">
-      <p class="summary-label">今日の達成感</p>
-      <p class="summary-main">${milestone.progressRate}%</p>
-      <p class="summary-sub">前回節目 ${milestone.previous || 0}日 → 次の節目 ${milestone.next}日</p>
-    </article>
-  `;
+function buildHeroStory(featured, list) {
+  const latest = [...list]
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+    .slice(0, 2)
+    .map((item) => item.title);
+  if (!latest.length) {
+    return `${featured.title}を中心に、ふたりの毎日を育てていきましょう。`;
+  }
+  if (latest.length === 1) {
+    return `最近は「${latest[0]}」を記録。次は「${featured.title}」へ向かう流れです。`;
+  }
+  return `最近は「${latest[0]}」から「${latest[1]}」へ。今は「${featured.title}」が主役のタイミングです。`;
 }
 
-function buildMilestonePanel(featured, milestone) {
-  const milestones = [100, 200, 365, 500, 730]
-    .map((day) => {
-      const date = new Date(`${featured.date}T00:00:00`);
-      date.setDate(date.getDate() + day);
-      return `<li><strong>${day}日:</strong> ${ymdToJp(toYmd(date))}</li>`;
+function getMoodLabel(list, streak) {
+  const nearCount = list.filter((item) => {
+    const diff = daysFromToday(item.date);
+    return diff >= 0 && diff <= 14;
+  }).length;
+  if (nearCount >= 2) return "イベントが近くてわくわく";
+  if (streak >= 7) return "落ち着いて続けられている";
+  if (list.length <= 2) return "これから一緒に育てる時期";
+  return "穏やかに積み重ね中";
+}
+
+function buildRecentFlow(list) {
+  const recent = [...list]
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+    .slice(0, 3);
+  if (!recent.length) {
+    return `<li class="flow-empty">まだ出来事がありません。新しい記録を追加して流れを作りましょう。</li>`;
+  }
+  return recent
+    .map((item) => {
+      const diff = daysFromToday(item.date);
+      return `
+      <li class="flow-item">
+        <p class="flow-title">${escapeHtml(item.title)}</p>
+        <p class="flow-meta">${ymdToJp(item.date)} ・ ${formatCountLabel(diff)}</p>
+      </li>`;
     })
     .join("");
+}
 
+function buildNextActions(featured, milestone, list) {
+  const notify = getPseudoNotifications(featured)[0];
+  const nextMilestoneIn = Math.max(0, daysFromToday(milestone.nextDate));
+  const recentCount = [...list].filter((item) => daysFromToday(item.date) < 0 && daysFromToday(item.date) >= -30).length;
   return `
-    <div class="progress-wrap">
-      <p class="progress-title">${escapeHtml(featured.title)} の進行度</p>
-      <div class="progress-track large"><div class="progress-fill animated" style="width:${milestone.progressRate}%"></div></div>
-      <p class="progress-caption">${milestone.previous}日目（${ymdToJp(milestone.previousDate)}）から ${milestone.next}日目（${ymdToJp(milestone.nextDate)}）へ</p>
-    </div>
-    <ul class="milestone-list">${milestones}</ul>
+    <article class="summary-item highlight">
+      <p class="summary-label">いちばん近い予定</p>
+      <p class="summary-main">${escapeHtml(featured.title)}</p>
+      <p class="summary-sub">${ymdToJp(featured.date)} / ${formatCountLabel(daysFromToday(featured.date))}</p>
+    </article>
+    <article class="summary-item">
+      <p class="summary-label">次の節目まで</p>
+      <p class="summary-main">${milestone.next}日目まであと${nextMilestoneIn}日</p>
+      <p class="summary-sub">${ymdToJp(milestone.nextDate)} に到達予定</p>
+    </article>
+    <article class="summary-item">
+      <p class="summary-label">次のひとことアクション</p>
+      <p class="summary-main">${ymdToJp(notify.date)} に向けてメモを1つ残す</p>
+      <p class="summary-sub">直近30日で${recentCount}件の思い出。短い記録でも十分です。</p>
+    </article>
   `;
 }
 
-function buildNotifyList(featured) {
-  const list = getPseudoNotifications(featured)
-    .map((item) => `<li><span>${item.label}</span><strong>${ymdToJp(item.date)}</strong></li>`)
-    .join("");
-  return `<ul>${list}</ul>`;
+function buildEmptyActions(streak) {
+  return `
+    <article class="summary-item highlight">
+      <p class="summary-label">最初のステップ</p>
+      <p class="summary-main">記念日を1つ登録</p>
+      <p class="summary-sub">付き合った日・誕生日など、思い出しやすいものから。</p>
+    </article>
+    <article class="summary-item">
+      <p class="summary-label">次のステップ</p>
+      <p class="summary-main">短いメッセージを添える</p>
+      <p class="summary-sub">「どんな日だったか」を1行だけ残すと、後で振り返りやすくなります。</p>
+    </article>
+    <article class="summary-item">
+      <p class="summary-label">チェック習慣</p>
+      <p class="summary-main">連続チェック ${streak} 日</p>
+      <p class="summary-sub">毎日少し開くだけで、ふたりの流れが見えてきます。</p>
+    </article>
+  `;
 }
 
 function onSubmit(event) {
