@@ -59,7 +59,7 @@ function normalizeUsage(usage) {
 }
 
 function normalizeView(view) {
-  const sortType = ["nearest", "farthest", "created"].includes(view?.sortType) ? view.sortType : "nearest";
+  const sortType = ["nearest", "created", "title"].includes(view?.sortType) ? view.sortType : "nearest";
   const filterType = ["all", "within30", "within7"].includes(view?.filterType) ? view.filterType : "all";
   const categoryFilter = ["all", "birthday", "event", "anniversary", "other"].includes(view?.categoryFilter)
     ? view.categoryFilter
