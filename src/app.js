@@ -54,6 +54,7 @@ const el = {
   onboarding: document.getElementById("onboarding"),
   onboardingClose: document.getElementById("onboarding-close"),
   shareMain: document.getElementById("share-main"),
+  downloadMain: document.getElementById("download-main"),
   presentMain: document.getElementById("present-main"),
   floatingShare: document.getElementById("floating-share"),
   quickAddFab: document.getElementById("quick-add-fab"),
@@ -190,6 +191,9 @@ function bindEvents() {
   });
 
   el.shareMain.addEventListener("click", () => shareCard(getFeatured(), el.canvas, (text) => announce(text)));
+  if (el.downloadMain) {
+    el.downloadMain.addEventListener("click", () => saveCardAsImage(getFeatured(), el.canvas, (text) => announce(text)));
+  }
   el.presentMain.addEventListener("click", () => openPresent(getFeatured()));
   if (el.heroEmptyAdd) {
     el.heroEmptyAdd.addEventListener("click", () => {
