@@ -14,6 +14,8 @@ import { cleanText, escapeHtml, notify } from "./utils.js";
 import { saveCardAsImage, shareCard } from "./share.js";
 
 const SORT_RENDER_DELAY = 16;
+const INITIAL_RENDER_COUNT = 20;
+const APPEND_CHUNK_SIZE = 12;
 
 const state = loadState(STORAGE_KEY);
 const el = {
@@ -26,6 +28,9 @@ const el = {
   checkinStats: document.getElementById("checkin-stats"),
   list: document.getElementById("anniversary-list"),
   listState: document.getElementById("list-state"),
+  listLoading: document.getElementById("list-loading"),
+  listMoreBtn: document.getElementById("list-more-btn"),
+  listSentinel: document.getElementById("list-sentinel"),
   sortSelect: document.getElementById("sort-select"),
   filterToggle: document.getElementById("filter-toggle"),
   searchInput: document.getElementById("search-input"),
@@ -78,7 +83,12 @@ const el = {
 };
 
 const listRuntime = {
-  renderTimer: 0
+  renderTimer: 0,
+  observer: null,
+  sections: {},
+  renderQueue: [],
+  queueIndex: 0,
+  listSignature: ""
 };
 
 initViewStateFromQuery();
@@ -140,6 +150,7 @@ function bindEvents() {
     persist();
     scheduleRenderCards();
   });
+  el.listMoreBtn.addEventListener("click", () => appendNextChunk());
 
   el.themeToggle.addEventListener("click", () => {
     state.themeMode = nextThemeMode(state.themeMode);
@@ -274,18 +285,23 @@ function renderCards() {
     empty.className = "list-empty";
     empty.textContent = "記念日がありません。まずは1件追加してみましょう。";
     el.list.replaceChildren(empty);
+    setListLoading(false);
+    toggleMoreControls(false);
     return;
   }
-
-  const fragment = document.createDocumentFragment();
-  fragment.appendChild(buildGroupSection("これからの予定", grouped.upcoming, today));
-  fragment.appendChild(buildGroupSection("過去の記念日", grouped.past, today));
-  el.list.replaceChildren(fragment);
+  renderList(grouped, today);
 }
 
 function resetListRendering() {
   window.clearTimeout(listRuntime.renderTimer);
+  disconnectListObserver();
+  listRuntime.sections = {};
+  listRuntime.renderQueue = [];
+  listRuntime.queueIndex = 0;
+  listRuntime.listSignature = "";
   el.list.textContent = "";
+  setListLoading(false);
+  toggleMoreControls(false);
 }
 
 function scheduleRenderCards() {
@@ -295,27 +311,140 @@ function scheduleRenderCards() {
   }, SORT_RENDER_DELAY);
 }
 
-function buildGroupSection(title, items, today) {
+function renderList(grouped, today = new Date()) {
+  const nextSignature = buildListSignature(grouped, today);
+  const needsFullRefresh = nextSignature !== listRuntime.listSignature;
+  if (!needsFullRefresh) return;
+  listRuntime.listSignature = nextSignature;
+  setListLoading(true);
+  disconnectListObserver();
+  listRuntime.sections = {};
+  listRuntime.renderQueue = [];
+  listRuntime.queueIndex = 0;
+  el.list.replaceChildren(buildSkeletonList(4));
+  requestAnimationFrame(() => {
+    buildListShell(grouped);
+    buildRenderQueue(grouped, today);
+    appendNextChunk(INITIAL_RENDER_COUNT);
+  });
+}
+
+function buildListShell(grouped) {
+  const fragment = document.createDocumentFragment();
+  const upcomingSection = createGroupSection("upcoming", "これからの予定", grouped.upcoming.length);
+  const pastSection = createGroupSection("past", "過去の記念日", grouped.past.length);
+  fragment.appendChild(upcomingSection);
+  fragment.appendChild(pastSection);
+  el.list.replaceChildren(fragment);
+  listRuntime.sections.upcoming = upcomingSection.querySelector(".ann-group-list");
+  listRuntime.sections.past = pastSection.querySelector(".ann-group-list");
+}
+
+function buildRenderQueue(grouped, today) {
+  listRuntime.renderQueue = [];
+  grouped.upcoming.forEach((item) => listRuntime.renderQueue.push({ group: "upcoming", item, today }));
+  grouped.past.forEach((item) => listRuntime.renderQueue.push({ group: "past", item, today }));
+}
+
+function appendNextChunk(size = APPEND_CHUNK_SIZE) {
+  const hasRemaining = listRuntime.queueIndex < listRuntime.renderQueue.length;
+  if (!hasRemaining) {
+    setListLoading(false);
+    toggleMoreControls(false);
+    return;
+  }
+
+  setListLoading(true);
+  const end = Math.min(listRuntime.queueIndex + size, listRuntime.renderQueue.length);
+  const byGroup = { upcoming: document.createDocumentFragment(), past: document.createDocumentFragment() };
+
+  for (let i = listRuntime.queueIndex; i < end; i += 1) {
+    const entry = listRuntime.renderQueue[i];
+    byGroup[entry.group].appendChild(buildAnniversaryCard(entry.item, entry.today));
+  }
+  listRuntime.queueIndex = end;
+
+  requestAnimationFrame(() => {
+    if (byGroup.upcoming.childNodes.length) listRuntime.sections.upcoming.appendChild(byGroup.upcoming);
+    if (byGroup.past.childNodes.length) listRuntime.sections.past.appendChild(byGroup.past);
+
+    const done = listRuntime.queueIndex >= listRuntime.renderQueue.length;
+    setListLoading(!done);
+    toggleMoreControls(!done);
+    if (!done) setupListObserver();
+  });
+}
+
+function createGroupSection(key, title, count) {
   const section = document.createElement("section");
   section.className = "ann-group";
+  section.dataset.group = key;
   const heading = document.createElement("h3");
   heading.className = "ann-group-heading";
-  heading.textContent = `${title}（${items.length}件）`;
-  section.appendChild(heading);
-
-  if (!items.length) {
+  heading.textContent = `${title}（${count}件）`;
+  const list = document.createElement("div");
+  list.className = "ann-group-list";
+  if (!count) {
     const empty = document.createElement("p");
     empty.className = "muted";
     empty.textContent = "該当なし";
-    section.appendChild(empty);
-    return section;
+    list.appendChild(empty);
   }
-
-  const list = document.createElement("div");
-  list.className = "ann-group-list";
-  items.forEach((item) => list.appendChild(buildAnniversaryCard(item, today)));
+  section.appendChild(heading);
   section.appendChild(list);
   return section;
+}
+
+function buildListSignature(grouped, today = new Date()) {
+  const ids = [...grouped.upcoming, ...grouped.past].map((item) => item.id).join(",");
+  return [
+    state.view.sortType,
+    state.view.filterType,
+    state.view.categoryFilter,
+    state.view.searchQuery,
+    toYmd(today),
+    ids
+  ].join("|");
+}
+
+function buildSkeletonList(count = 3) {
+  const wrap = document.createElement("div");
+  wrap.className = "list-skeleton-wrap";
+  for (let i = 0; i < count; i += 1) {
+    const item = document.createElement("div");
+    item.className = "list-skeleton";
+    item.innerHTML = '<div class="line w-50"></div><div class="line w-80"></div><div class="line w-60"></div>';
+    wrap.appendChild(item);
+  }
+  return wrap;
+}
+
+function setupListObserver() {
+  if (!("IntersectionObserver" in window)) return;
+  disconnectListObserver();
+  listRuntime.observer = new IntersectionObserver(
+    (entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      appendNextChunk();
+    },
+    { rootMargin: "0px 0px 240px 0px", threshold: 0 }
+  );
+  listRuntime.observer.observe(el.listSentinel);
+}
+
+function disconnectListObserver() {
+  if (!listRuntime.observer) return;
+  listRuntime.observer.disconnect();
+  listRuntime.observer = null;
+}
+
+function toggleMoreControls(visible) {
+  el.listMoreBtn.classList.toggle("hidden", !visible);
+  el.listSentinel.classList.toggle("hidden", !visible);
+}
+
+function setListLoading(isLoading) {
+  el.listLoading.classList.toggle("hidden", !isLoading);
 }
 
 function buildAnniversaryCard(item, today = new Date()) {
