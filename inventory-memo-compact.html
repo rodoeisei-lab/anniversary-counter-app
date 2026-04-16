@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>在庫メモ</title>
+  <meta name="robots" content="noindex,nofollow">
+  <style>
+    :root {
+      --bg:#f4f6fb; --card:#fff; --line:#d9e0ea; --text:#172033; --muted:#667085;
+      --accent:#1d4ed8; --accent-soft:#eaf1ff; --ok:#166534; --danger:#b91c1c;
+      --radius:14px; --shadow:0 6px 18px rgba(15,23,42,.06);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Hiragino Sans","Yu Gothic",sans-serif}
+    .wrap{max-width:760px;margin:0 auto;padding:10px 10px 88px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .top{padding:12px 12px 10px;margin-bottom:10px}
+    h1{margin:0 0 4px;font-size:1.15rem}
+    .sub{font-size:.84rem;color:var(--muted);margin:0}
+    .meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+    .field{display:flex;flex-direction:column;gap:4px}
+    .field label{font-size:.8rem;font-weight:700;color:var(--muted)}
+    input,textarea,button{font:inherit}
+    input,textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 11px;background:#fff;color:var(--text)}
+    textarea{min-height:72px;resize:vertical}
+    .tabs{display:flex;gap:8px;position:sticky;top:0;padding:6px 0 8px;background:linear-gradient(var(--bg),var(--bg));z-index:10}
+    .tab{flex:1;border:1px solid var(--line);background:#fff;border-radius:999px;padding:10px 12px;font-weight:700;color:var(--text)}
+    .tab.active{background:var(--accent-soft);border-color:#bdd0ff;color:var(--accent)}
+    .section{display:none}
+    .section.active{display:block}
+    details.group{margin-bottom:8px}
+    details.group summary{list-style:none;cursor:pointer;padding:11px 12px;font-weight:700;border-radius:12px}
+    details.group[open] summary{border-bottom:1px solid var(--line);border-bottom-left-radius:0;border-bottom-right-radius:0}
+    details.group summary::-webkit-details-marker{display:none}
+    .rows{padding:8px 10px 10px}
+    .row{display:grid;grid-template-columns:minmax(0,1fr) 84px;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #edf1f6}
+    .row:last-child{border-bottom:0}
+    .name{font-size:.93rem;line-height:1.25}
+    .qty{padding:8px 10px;text-align:center}
+    .memo-wrap{padding:8px 10px 10px;display:grid;gap:8px}
+    .sticky{position:fixed;left:0;right:0;bottom:0;padding:8px 10px calc(8px + env(safe-area-inset-bottom));background:linear-gradient(transparent,rgba(244,246,251,.96) 20%);z-index:20}
+    .actions{max-width:760px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    button{border:0;border-radius:12px;padding:12px 10px;font-weight:700}
+    .primary{background:var(--accent);color:#fff}
+    .success{background:#dcfce7;color:var(--ok)}
+    .plain{background:#eef2f7;color:var(--text)}
+    .danger{background:#fee2e2;color:var(--danger)}
+    .result{margin-top:10px;padding:10px}
+    .result label{display:block;font-size:.82rem;font-weight:700;color:var(--muted);margin-bottom:6px}
+    .status{font-size:.82rem;color:var(--muted);margin-top:6px;min-height:1.2em}
+    .help{margin-top:8px}
+    .help summary{font-size:.84rem;color:var(--muted);font-weight:700}
+    @media (max-width:560px){.meta,.actions{grid-template-columns:1fr}.wrap{padding-bottom:146px}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card top">
+      <h1>在庫メモ</h1>
+      <p class="sub">入力してコピーまたはCSV保存。途中入力はこの端末に残ります。</p>
+      <div class="meta">
+        <div class="field">
+          <label for="checkDate">点検日</label>
+          <input id="checkDate" type="date">
+        </div>
+        <div class="field">
+          <label for="inspector">入力者</label>
+          <input id="inspector" type="text" placeholder="任意">
+        </div>
+      </div>
+      <details class="help">
+        <summary>使い方</summary>
+        <div class="sub">数量入力 → コピー用テキスト作成 or CSV保存 → Excel入力</div>
+      </details>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="tube" type="button">検知管</button>
+      <button class="tab" data-tab="supplies" type="button">備品</button>
+    </div>
+
+    <section class="section active" id="tube"></section>
+    <section class="section" id="supplies"></section>
+
+    <div class="card result">
+      <label for="summary">コピー用テキスト</label>
+      <textarea id="summary" placeholder="ここに作成されます"></textarea>
+      <div class="status" id="status"></div>
+    </div>
+  </div>
+
+  <div class="sticky">
+    <div class="actions">
+      <button type="button" class="primary" id="buildSummary">コピー用テキスト作成</button>
+      <button type="button" class="success" id="downloadCsv">CSV保存</button>
+      <button type="button" class="plain" id="copySummary">コピー</button>
+      <button type="button" class="danger" id="resetForm">入力を消す</button>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'inventory-memo-compact-v1';
+    const defs = {
+      tube: [
+        {title:'ガステック', open:true, items:['アセトン','フッ化水素','シアン化水素','スチレン','キシレン','酢酸ブチル','アミン類','硝酸','2-ブタノール','クロロホルム（5本）','メチルエチルケトン（5本）']},
+        {title:'北川', items:['イソプロピルアルコール','エチレンオキシド（5本）','トルエン','酢酸エチル','硫化水素','N,N-ジメチルホルムアミド','ベンゼン（5本）','ホルマリン（20本）']},
+        {title:'メモ', textareas:['補充が必要なもの','廃棄したもの','期限が近いもの・気づいたこと']}
+      ],
+      supplies: [
+        {title:'準備室', open:true, items:['発煙管','カーボンビーズ（活性炭）','シリカゲルチューブ','アルカリ乾電池 単3','アルカリ乾電池 単1','ガラス繊維ろ紙 GA-55（金属 大）','ワットマン定量ろ紙 No.41 φ55（Be用）','ユニパック マークA（Be用）','捕集板用グリス','ヒドラジンカートリッジ','石綿用吸収缶']},
+        {title:'検査室', items:['メンブランフィルター AAWP04700 φ25mm（Mn）','メンブランフィルター AAWP-02500 φ47mm（Co・Ni・Pb）','アドバンテック 定量ろ紙 No.6']},
+        {title:'メモ', textareas:['準備室メモ','検査室メモ','事務所メモ','倉庫メモ','補充が必要なもの']}
+      ]
+    };
+    const state = (()=>{try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')}catch{return {}}})();
+    const id = (t)=>t.replace(/[^\w\u3040-\u30ff\u3400-\u9fff]+/g,'_');
+    const setStatus = (m)=>document.getElementById('status').textContent=m;
+    const save=()=>{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));setStatus('この端末に保存しました。');};
+
+    function itemRow(section, group, name){
+      const key=`${section}__${group}__${name}`;
+      return `<div class="row"><div class="name">${name}</div><input class="qty" id="${id(key)}" type="number" min="0" step="1" inputmode="numeric" value="${state[key]??''}" placeholder="0"></div>`;
+    }
+    function memoField(section, group, name){
+      const key=`${section}__${group}__${name}`;
+      return `<div><label for="${id(key)}" class="sub">${name}</label><textarea id="${id(key)}">${state[key]??''}</textarea></div>`;
+    }
+    function render(section){
+      document.getElementById(section).innerHTML = defs[section].map(group=>{
+        const body = group.items
+          ? `<div class="rows">${group.items.map(x=>itemRow(section,group.title,x)).join('')}</div>`
+          : `<div class="memo-wrap">${group.textareas.map(x=>memoField(section,group.title,x)).join('')}</div>`;
+        return `<details class="card group" ${group.open?'open':''}><summary>${group.title}</summary>${body}</details>`;
+      }).join('');
+    }
+    function bind(){
+      Object.keys(defs).forEach(section=>defs[section].forEach(group=>{
+        (group.items||[]).forEach(name=>{
+          const key=`${section}__${group.title}__${name}`;
+          document.getElementById(id(key)).addEventListener('input',e=>{state[key]=e.target.value;save();});
+        });
+        (group.textareas||[]).forEach(name=>{
+          const key=`${section}__${group.title}__${name}`;
+          document.getElementById(id(key)).addEventListener('input',e=>{state[key]=e.target.value;save();});
+        });
+      }));
+      document.getElementById('checkDate').addEventListener('input',e=>{state.checkDate=e.target.value;save();});
+      document.getElementById('inspector').addEventListener('input',e=>{state.inspector=e.target.value;save();});
+      document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{
+        document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+        document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+        window.scrollTo({top:0,behavior:'smooth'});
+      }));
+    }
+    function initMeta(){
+      const d=new Date();
+      const today=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      document.getElementById('checkDate').value=state.checkDate||today;
+      document.getElementById('inspector').value=state.inspector||'';
+      if(!state.checkDate) state.checkDate=today;
+    }
+    function summaryText(){
+      const lines=[`点検日: ${state.checkDate||''}`,`入力者: ${state.inspector||''}`,''];
+      const labels={tube:'【検知管】',supplies:'【備品】'};
+      Object.keys(defs).forEach(section=>{
+        lines.push(labels[section]);
+        defs[section].forEach(group=>{
+          let added=false;
+          (group.items||[]).forEach(name=>{
+            const key=`${section}__${group.title}__${name}`; const val=state[key];
+            if(val!==undefined&&val!==''){ if(!added){lines.push(`■ ${group.title}`); added=true;} lines.push(`${name}: ${val}`); }
+          });
+          (group.textareas||[]).forEach(name=>{
+            const key=`${section}__${group.title}__${name}`; const val=(state[key]||'').trim();
+            if(val){ if(!added){lines.push(`■ ${group.title}`); added=true;} lines.push(`${name}: ${val}`); }
+          });
+          if(added) lines.push('');
+        });
+      });
+      return lines.join('\n').replace(/\n{3,}/g,'\n\n').trim();
+    }
+    function csvText(){
+      const rows=[['点検日','入力者','区分','分類','品目','数量または内容']];
+      const q=(v)=>'"'+String(v??'').replaceAll('"','""')+'"';
+      Object.keys(defs).forEach(section=>{
+        const sectionLabel=section==='tube'?'検知管':'備品';
+        defs[section].forEach(group=>{
+          (group.items||[]).forEach(name=>{
+            const key=`${section}__${group.title}__${name}`; const val=state[key];
+            if(val!==undefined&&val!=='') rows.push([state.checkDate||'',state.inspector||'',sectionLabel,group.title,name,val]);
+          });
+          (group.textareas||[]).forEach(name=>{
+            const key=`${section}__${group.title}__${name}`; const val=(state[key]||'').trim();
+            if(val) rows.push([state.checkDate||'',state.inspector||'',sectionLabel,group.title,name,val]);
+          });
+        });
+      });
+      return rows.map(r=>r.map(q).join(',')).join('\r\n');
+    }
+    function downloadCsv(){
+      const blob=new Blob([csvText()],{type:'text/csv;charset=utf-8;'});
+      const url=URL.createObjectURL(blob); const a=document.createElement('a');
+      a.href=url; a.download=`inventory-memo-${state.checkDate||'data'}.csv`; a.click(); URL.revokeObjectURL(url); setStatus('CSVを保存しました。');
+    }
+    function copySummary(){
+      const area=document.getElementById('summary');
+      if(!area.value.trim()){setStatus('先にコピー用テキスト作成を押してください。'); return;}
+      area.select(); area.setSelectionRange(0,99999);
+      navigator.clipboard.writeText(area.value).then(()=>setStatus('コピーしました。')).catch(()=>setStatus('手動でコピーしてください。'));
+    }
+    function resetForm(){ if(confirm('この端末の入力を消します。よろしいですか。')){ localStorage.removeItem(STORAGE_KEY); location.reload(); } }
+
+    render('tube'); render('supplies'); initMeta(); bind();
+    document.getElementById('buildSummary').addEventListener('click',()=>{document.getElementById('summary').value=summaryText(); setStatus('コピー用テキストを作成しました。');});
+    document.getElementById('downloadCsv').addEventListener('click',downloadCsv);
+    document.getElementById('copySummary').addEventListener('click',copySummary);
+    document.getElementById('resetForm').addEventListener('click',resetForm);
+  </script>
+</body>
+</html>
