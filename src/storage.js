@@ -1,7 +1,7 @@
 import { SAMPLE_ITEMS } from "./constants.js";
 import { cleanText } from "./utils.js";
 
-export function loadState(storageKey) {
+export function loadData(storageKey) {
   try {
     const raw = JSON.parse(localStorage.getItem(storageKey) || "{}");
     return {
@@ -11,7 +11,8 @@ export function loadState(storageKey) {
       presentingId: "",
       onboardingDone: !!raw.onboardingDone,
       usage: normalizeUsage(raw.usage),
-      view: normalizeView(raw.view)
+      view: normalizeView(raw.view),
+      drafts: normalizeDrafts(raw.drafts)
     };
   } catch {
     return {
@@ -21,21 +22,45 @@ export function loadState(storageKey) {
       presentingId: "",
       onboardingDone: false,
       usage: { openedDates: [] },
-      view: { sortType: "nearest", filterType: "all", categoryFilter: "all", searchQuery: "" }
+      view: { sortType: "nearest", filterType: "all", categoryFilter: "all", searchQuery: "" },
+      drafts: createEmptyDrafts()
     };
   }
 }
 
-export function persistState(storageKey, state) {
-  const payload = {
+export function saveData(storageKey, state, previousSerialized = "") {
+  const payload = createPersistPayload(state);
+  const serialized = JSON.stringify(payload);
+  if (!hasChanged(previousSerialized, serialized)) {
+    return { saved: false, serialized };
+  }
+  localStorage.setItem(storageKey, serialized);
+  return { saved: true, serialized };
+}
+
+export function createPersistPayload(state) {
+  return {
     anniversaries: state.anniversaries,
     darkMode: state.darkMode,
     themeMode: state.themeMode,
     onboardingDone: state.onboardingDone,
     usage: state.usage,
-    view: state.view
+    view: state.view,
+    drafts: normalizeDrafts(state.drafts)
   };
-  localStorage.setItem(storageKey, JSON.stringify(payload));
+}
+
+export function serializeState(state) {
+  return JSON.stringify(createPersistPayload(state));
+}
+
+export function hasChanged(previousSerialized = "", nextSerialized = "") {
+  return previousSerialized !== nextSerialized;
+}
+
+export const loadState = loadData;
+export function persistState(storageKey, state) {
+  return saveData(storageKey, state);
 }
 
 function normalizeItems(list) {
@@ -71,6 +96,46 @@ function normalizeView(view) {
 function normalizeThemeMode(mode, darkMode) {
   if (["auto", "light", "dark"].includes(mode)) return mode;
   return darkMode ? "dark" : "auto";
+}
+
+function normalizeDrafts(drafts) {
+  const source = drafts && typeof drafts === "object" ? drafts : {};
+  return {
+    main: normalizeDraft(source.main),
+    quick: normalizeQuickDraft(source.quick)
+  };
+}
+
+function normalizeDraft(draft) {
+  const source = draft && typeof draft === "object" ? draft : {};
+  return {
+    id: cleanText(source.id || "", 64),
+    title: cleanText(source.title || "", 40),
+    date: normalizeDate(source.date),
+    message: cleanText(source.message || "", 120),
+    category: normalizeCategory(source.category),
+    theme: ["simple", "romantic", "pop"].includes(source.theme) ? source.theme : "simple"
+  };
+}
+
+function normalizeQuickDraft(draft) {
+  const source = draft && typeof draft === "object" ? draft : {};
+  return {
+    title: cleanText(source.title || "", 40),
+    date: normalizeDate(source.date),
+    category: normalizeCategory(source.category)
+  };
+}
+
+function createEmptyDrafts() {
+  return {
+    main: normalizeDraft({}),
+    quick: normalizeQuickDraft({})
+  };
+}
+
+function normalizeDate(date) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(date || "") ? date : "";
 }
 
 function normalizeCategory(category) {
