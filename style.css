@@ -105,8 +105,9 @@ main {
   top: 0;
   z-index: 15;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
+  gap: 10px;
   backdrop-filter: blur(8px);
 }
 
@@ -262,6 +263,25 @@ h2 { font-size: 1.15rem; }
 :root[data-theme="dark"] .btn.secondary { background: #2b3551; color: #d8deff; }
 .icon-btn { background: #eef1ff; }
 :root[data-theme="dark"] .icon-btn { background: #242b42; color: #f2f4ff; }
+
+.save-indicator {
+  margin-left: auto;
+  font-size: .82rem;
+  color: var(--text-soft);
+  background: color-mix(in srgb, var(--surface) 76%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 10px;
+  line-height: 1.4;
+}
+.save-indicator.is-dirty {
+  color: #8a5a00;
+  border-color: rgba(255, 170, 0, 0.45);
+}
+.save-indicator.is-saving {
+  color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 32%, var(--line));
+}
 
 .form-grid { display: grid; gap: 12px; margin-top: 10px; }
 label { display: grid; gap: 6px; color: var(--text-soft); font-size: 1rem; font-weight: 700; }
