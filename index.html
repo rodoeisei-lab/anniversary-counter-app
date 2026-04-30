@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>労働衛生・作業環境測定サポート</title>
+    <title>記念日カウント</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -11,81 +11,83 @@
       <header class="top-hero">
         <button class="circle-btn" aria-label="メニュー">☰</button>
         <div class="hero-copy">
-          <p class="eyebrow">Occupational Health & Safety</p>
-          <h1>労働衛生・作業環境測定</h1>
-          <p>測定計画から改善提案まで、現場で使える情報をひとつに。</p>
+          <h1>記念日カウント</h1>
+          <p>大切な日を、もっと特別に。</p>
+          <div class="sparkles" aria-hidden="true">♡ ✦</div>
         </div>
-        <button class="circle-btn" aria-label="通知">🔔</button>
+        <button class="circle-btn" aria-label="設定">⚙</button>
       </header>
 
       <main class="content">
         <section class="today-card card">
-          <div>
-            <p class="label">本日の対応タスク</p>
-            <p class="today-date">8件 <span class="weekday">重要2</span></p>
-            <p class="muted-text">2026.04.30（木）更新</p>
+          <div class="today-main">
+            <div class="today-icon">📅</div>
+            <div>
+              <p class="label">今日は</p>
+              <p class="today-date">2026.04.30 <span class="weekday">木</span></p>
+            </div>
           </div>
-          <button class="calendar-btn">📅 予定を確認</button>
+          <button class="calendar-btn">カレンダー表示</button>
         </section>
 
         <section class="list-head-row">
-          <h2>進行中の案件</h2>
-          <button class="add-btn">＋ 案件を追加</button>
+          <h2>♡ 記念日一覧</h2>
+          <button class="add-btn">＋ 記念日を追加</button>
         </section>
 
         <section class="anniversary-list">
           <article class="ann-card card">
-            <div class="icon">🏭</div>
+            <div class="icon">♡</div>
             <div class="meta">
-              <h3>化学工場A棟 定期測定</h3>
-              <p>粉じん・有機溶剤・騒音</p>
-              <span>提出期限: 2026.05.08</span>
+              <h3>付き合った日</h3>
+              <p>2025.03.02</p>
+              <span>ふたりの記念日</span>
             </div>
-            <div class="days"><strong>あと8</strong><small>日</small></div>
+            <div class="days pink"><strong>424日</strong></div>
             <div class="arrow">›</div>
           </article>
 
           <article class="ann-card card">
-            <div class="icon">🧪</div>
+            <div class="icon">💍</div>
             <div class="meta">
-              <h3>研究室B 換気評価</h3>
-              <p>局所排気装置の性能確認</p>
-              <span>再測定: 2026.05.02</span>
+              <h3>プロポーズ記念日</h3>
+              <p>2026.03.02</p>
+              <span>特別な日</span>
             </div>
-            <div class="days"><strong>2</strong><small>日後</small></div>
+            <div class="days orange"><strong>59日</strong></div>
             <div class="arrow">›</div>
           </article>
 
           <article class="ann-card card">
-            <div class="icon">📊</div>
+            <div class="icon">🧳</div>
             <div class="meta">
-              <h3>月次報告書作成</h3>
-              <p>15現場分の集計とコメント</p>
-              <span>社内レビュー待ち</span>
+              <h3>初めての旅行</h3>
+              <p>2025.08.05</p>
+              <span>思い出</span>
             </div>
-            <div class="days"><strong>65%</strong><small>完了</small></div>
+            <div class="days purple"><strong>269日</strong></div>
             <div class="arrow">›</div>
           </article>
 
           <article class="ann-card card">
-            <div class="icon">✅</div>
+            <div class="icon">👫</div>
             <div class="meta">
-              <h3>倉庫C 改善フォロー</h3>
-              <p>照度・温熱環境の是正確認</p>
-              <span>次回訪問: 2026.05.15</span>
+              <h3>出会って1000日</h3>
+              <p>2027.11.26</p>
+              <span>ふたりの記念日</span>
             </div>
-            <div class="days"><strong>良好</strong><small>継続</small></div>
+            <div class="days blue"><strong>あと575日</strong></div>
             <div class="arrow">›</div>
           </article>
         </section>
       </main>
 
       <nav class="bottom-nav">
-        <button>ホーム</button>
-        <button>案件</button>
-        <button class="center-add">＋<span>新規</span></button>
-        <button>分析</button>
-        <button>資料</button>
+        <button class="active">ホーム</button>
+        <button>一覧</button>
+        <button class="center-add">＋</button>
+        <button>統計</button>
+        <button>シェア</button>
       </nav>
     </div>
   </body>
