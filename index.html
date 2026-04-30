@@ -3,90 +3,121 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>記念日カウント</title>
+    <title>記念日カウント | 統計</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <div class="phone-frame">
-      <header class="top-hero">
-        <button class="circle-btn" aria-label="メニュー">☰</button>
-        <div class="hero-copy">
-          <h1>記念日カウント</h1>
-          <p>大切な日を、もっと特別に。</p>
-          <div class="sparkles" aria-hidden="true">♡ ✦</div>
-        </div>
-        <button class="circle-btn" aria-label="設定">⚙</button>
+      <header class="top-header">
+        <button class="back-btn" aria-label="戻る">←</button>
+        <h1>統計</h1>
       </header>
 
       <main class="content">
-        <section class="today-card card">
-          <div class="today-main">
-            <div class="today-icon">📅</div>
+        <section class="tabs card-shell">
+          <button class="tab active">全体</button>
+          <button class="tab">月別</button>
+          <button class="tab">カテゴリ別</button>
+          <button class="tab">年別</button>
+        </section>
+
+        <section class="card summary-card">
+          <div class="card-head-row">
             <div>
-              <p class="label">今日は</p>
-              <p class="today-date">2026.04.30 <span class="weekday">木</span></p>
+              <h2>記念日サマリー</h2>
+              <p>あなたの大切な記念日をデータで振り返りましょう。</p>
+            </div>
+            <button class="filter-btn">全期間 ▾</button>
+          </div>
+
+          <div class="stats-grid">
+            <article class="stat">
+              <div class="stat-icon pink">📅</div>
+              <strong>12</strong>
+              <span>記念日総数</span>
+            </article>
+            <article class="stat">
+              <div class="stat-icon gold">⭐</div>
+              <strong>3</strong>
+              <span>今年の記念日</span>
+            </article>
+            <article class="stat">
+              <div class="stat-icon green">◔</div>
+              <strong>736</strong>
+              <span>平均継続日数</span>
+            </article>
+            <article class="stat">
+              <div class="stat-icon blue">🏅</div>
+              <strong>1,842</strong>
+              <span>最長継続日数</span>
+            </article>
+          </div>
+        </section>
+
+        <section class="card graph-card">
+          <div class="section-head">
+            <h2>月別の記念日数</h2>
+            <span>（件）</span>
+          </div>
+          <div class="bar-chart" aria-label="1月から12月の月別棒グラフ">
+            <div class="grid-lines"></div>
+            <div class="bars">
+              <div class="bar" style="--h:34%"><span>1月</span></div>
+              <div class="bar" style="--h:0%"><span>2月</span></div>
+              <div class="bar" style="--h:66%"><span>3月</span></div>
+              <div class="bar" style="--h:34%"><span>4月</span></div>
+              <div class="bar" style="--h:0%"><span>5月</span></div>
+              <div class="bar" style="--h:34%"><span>6月</span></div>
+              <div class="bar" style="--h:0%"><span>7月</span></div>
+              <div class="bar" style="--h:66%"><span>8月</span></div>
+              <div class="bar" style="--h:34%"><span>9月</span></div>
+              <div class="bar" style="--h:34%"><span>10月</span></div>
+              <div class="bar" style="--h:66%"><span>11月</span></div>
+              <div class="bar" style="--h:34%"><span>12月</span></div>
             </div>
           </div>
-          <button class="calendar-btn">カレンダー表示</button>
         </section>
 
-        <section class="list-head-row">
-          <h2>♡ 記念日一覧</h2>
-          <button class="add-btn">＋ 記念日を追加</button>
-        </section>
-
-        <section class="anniversary-list">
-          <article class="ann-card card">
-            <div class="icon">♡</div>
-            <div class="meta">
-              <h3>付き合った日</h3>
-              <p>2025.03.02</p>
-              <span>ふたりの記念日</span>
-            </div>
-            <div class="days pink"><strong>424日</strong></div>
-            <div class="arrow">›</div>
-          </article>
-
-          <article class="ann-card card">
-            <div class="icon">💍</div>
-            <div class="meta">
-              <h3>プロポーズ記念日</h3>
-              <p>2026.03.02</p>
-              <span>特別な日</span>
-            </div>
-            <div class="days orange"><strong>59日</strong></div>
-            <div class="arrow">›</div>
-          </article>
-
-          <article class="ann-card card">
-            <div class="icon">🧳</div>
-            <div class="meta">
-              <h3>初めての旅行</h3>
-              <p>2025.08.05</p>
-              <span>思い出</span>
-            </div>
-            <div class="days purple"><strong>269日</strong></div>
-            <div class="arrow">›</div>
-          </article>
-
-          <article class="ann-card card">
-            <div class="icon">👫</div>
-            <div class="meta">
-              <h3>出会って1000日</h3>
-              <p>2027.11.26</p>
-              <span>ふたりの記念日</span>
-            </div>
-            <div class="days blue"><strong>あと575日</strong></div>
-            <div class="arrow">›</div>
-          </article>
+        <section class="card upcoming-card">
+          <h2>今後の記念日</h2>
+          <div class="upcoming-list">
+            <article class="upcoming-item">
+              <div class="item-icon yellow">💍</div>
+              <div class="item-body">
+                <p class="date">2026.06.15（月）</p>
+                <p class="title">プロポーズ記念日</p>
+              </div>
+              <p class="countdown orange">あと 46 日</p>
+              <span class="chevron">›</span>
+            </article>
+            <article class="upcoming-item">
+              <div class="item-icon purple">🧳</div>
+              <div class="item-body">
+                <p class="date">2026.07.20（月）</p>
+                <p class="title">旅行の記念日</p>
+              </div>
+              <p class="countdown violet">あと 81 日</p>
+              <span class="chevron">›</span>
+            </article>
+            <article class="upcoming-item">
+              <div class="item-icon pink">💞</div>
+              <div class="item-body">
+                <p class="date">2026.09.02（水）</p>
+                <p class="title">付き合って2年記念日</p>
+              </div>
+              <p class="countdown rose">あと 125 日</p>
+              <span class="chevron">›</span>
+            </article>
+          </div>
+          <a href="#" class="more-link">もっと見る</a>
         </section>
       </main>
 
       <nav class="bottom-nav">
-        <button class="active">ホーム</button>
+        <button>ホーム</button>
         <button>一覧</button>
-        <button class="center-add">＋</button>
-        <button>統計</button>
+        <button class="center-add">＋<span>追加</span></button>
+        <button class="active">統計</button>
         <button>シェア</button>
       </nav>
     </div>
